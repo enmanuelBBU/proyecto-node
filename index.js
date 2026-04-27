@@ -38,17 +38,15 @@ app.post('/api/items', async (req, res) => {
   try {
     const item = req.body;
 
-    // Verificamos que venga el nombre, ya que lo usaremos como ID
     if (!item.nombre) {
       return res.status(400).json({ error: 'El campo "nombre" es requerido' });
     }
 
-    // Reemplazar espacios por "_" para generar el ID del documento
-    // Por ejemplo: "Pico de Piedra" -> "Pico_de_Piedra"
-    const docId = item.nombre.replace(/ /g, '_');
+    const docId = item.nombre
+      .toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/ /g, '_');
 
-    // Usamos .set() en lugar de .add() para que el ID sea el docId generado
-    // y para que si ya existe, sobreescriba todos los datos.
     await db.collection('items').doc(docId).set(item);
 
     res.status(201).json({
@@ -65,7 +63,7 @@ app.post('/api/items', async (req, res) => {
 // Endpoint para borrar un item
 app.delete('/api/items/:item_id', async (req, res) => {
   try {
-    const {item_id} = req.params;
+    const { item_id } = req.params;
     const docRef = db.collection('items').doc(item_id);
     const doc = await docRef.get();
 
@@ -85,10 +83,55 @@ app.delete('/api/items/:item_id', async (req, res) => {
   }
 });
 
+// Endpoint POST para ingresar un proyecto (ID automático de Firebase)
+app.post('/api/proyectos', async (req, res) => {
+  try {
+    const { nombre_proyecto, usuario_id, estado, objetivos, fecha_creacion } = req.body;
+
+    if (!nombre_proyecto || !usuario_id || !estado || !objetivos) {
+      return res.status(400).json({
+        error: 'Los campos "nombre_proyecto", "usuario_id", "estado" y "objetivos" son requeridos'
+      });
+    }
+
+    const estadosPermitidos = ['pendiente', 'en progreso', 'completado'];
+    if (!estadosPermitidos.includes(estado.toLowerCase())) {
+      return res.status(400).json({
+        error: `El campo "estado" debe ser uno de: ${estadosPermitidos.join(', ')}`
+      });
+    }
+
+    if (!Array.isArray(objetivos) || objetivos.length === 0) {
+      return res.status(400).json({
+        error: 'El campo "objetivos" debe ser un arreglo con al menos un elemento'
+      });
+    }
+
+    const proyecto = {
+      nombre_proyecto,
+      usuario_id,
+      estado: estado.toLowerCase(),
+      fecha_creacion: fecha_creacion || new Date().toISOString(),
+      objetivos
+    };
+
+    const docRef = await db.collection('proyectos').add(proyecto);
+
+    res.status(201).json({
+      mensaje: 'Proyecto creado exitosamente',
+      id: docRef.id,
+      data: proyecto
+    });
+  } catch (error) {
+    console.error('Error al crear el proyecto:', error);
+    res.status(500).json({ error: 'Error del servidor al intentar crear el proyecto' });
+  }
+});
+
 // Endpoint para borrar un proyecto
 app.delete('/api/proyectos/:id', async (req, res) => {
   try {
-    const {id} = req.params;
+    const { id } = req.params;
     const docRef = db.collection('proyectos').doc(id);
     const doc = await docRef.get();
 
