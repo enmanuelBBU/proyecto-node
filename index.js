@@ -62,6 +62,52 @@ app.post('/api/items', async (req, res) => {
   }
 });
 
+// Endpoint para borrar un item
+app.delete('/api/items/:item_id', async (req, res) => {
+  try {
+    const {item_id} = req.params;
+    const docRef = db.collection('items').doc(item_id);
+    const doc = await docRef.get();
+
+    if (!doc.exists) {
+      return res.status(404).json({ error: 'Item no encontrado' });
+    }
+
+    await docRef.delete();
+
+    res.status(200).json({
+      mensaje: 'Item eliminado exitosamente',
+    });
+
+  } catch (error) {
+    console.error('Error al eliminar el item:', error);
+    res.status(500).json({ error: 'Error al intentar eliminar el item' + error.message });
+  }
+});
+
+// Endpoint para borrar un proyecto
+app.delete('/api/proyectos/:id', async (req, res) => {
+  try {
+    const {id} = req.params;
+    const docRef = db.collection('proyectos').doc(id);
+    const doc = await docRef.get();
+
+    if (!doc.exists) {
+      return res.status(404).json({ error: 'Proyecto no encontrado' });
+    }
+
+    await docRef.delete();
+
+    res.status(200).json({
+      mensaje: 'Proyecto eliminado exitosamente',
+    });
+
+  } catch (error) {
+    console.error('Error al eliminar el proyecto:', error);
+    res.status(500).json({ error: 'Error al intentar eliminar el proyecto' + error.message });
+  }
+});
+
 // Iniciar el servidor
 app.listen(PORT, () => {
   console.log(`Servidor ejecutándose en http://localhost:${PORT}`);
