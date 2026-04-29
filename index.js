@@ -179,14 +179,21 @@ app.get('/api/items/:id/materiales', async (req, res) => {
     }
     const item = snapshot.data();
 
-    // Obtener solo los ingredientes directos para el crafteo
     const materialesRequeridos = item.ingredientes_para_calculo || [];
 
-    res.status(200).json({
+    const respuesta = {
       item: item.nombre,
       id: id,
+      es_materia_prima: item.es_materia_prima || false,
       materiales: materialesRequeridos
-    });
+    };
+
+    // Si no es materia prima y tiene una matriz de crafteo, la añadimos a la respuesta
+    if (!item.es_materia_prima && item.receta_matriz) {
+      respuesta.receta_matriz = item.receta_matriz;
+    }
+
+    res.status(200).json(respuesta);
   } catch (error) {
     res.status(500).json({
       error: 'Error al calcular materiales',
