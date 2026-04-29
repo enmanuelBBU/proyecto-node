@@ -168,6 +168,34 @@ app.get('/api/items', async (req, res) => {
   }
 });
 
+//Calcular materiales de un crafteo    
+app.get('/api/items/:id/materiales', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const snapshot = await db.collection('items').doc(id).get();
+
+    if (!snapshot.exists) {
+      return res.status(404).json({ error: 'Item no encontrado' });
+    }
+    const item = snapshot.data();
+
+    // Obtener solo los ingredientes directos para el crafteo
+    const materialesRequeridos = item.ingredientes_para_calculo || [];
+
+    res.status(200).json({
+      item: item.nombre,
+      id: id,
+      materiales: materialesRequeridos
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: 'Error al calcular materiales',
+      detalle: error.message
+    });
+  }
+});
+
+
 
 // Iniciar el servidor
 app.listen(PORT, () => {
