@@ -62,6 +62,79 @@ app.post('/api/items', async (req, res) => {
   }
 });
 
+//Endpoint PATCH para editar el nombre del proyecto
+app.patch('/api/editar/nombre/:id', async (req, res) => {
+  try{
+
+    const id = req.params.id;
+    const nombre_proyecto = req.body.nombre_proyecto;
+    const docRef = db.collection('proyectos').doc(id);
+
+    if(nombre_proyecto === undefined){
+      return res.status(400).json({ mensaje: 'El campo nombre_proyecto es requerido' });
+    }
+
+    const doc = await docRef.get();
+    if (!doc.exists) {
+      return res.status(404).json({ mensaje: 'Proyecto no encontrado' });
+    }
+
+    await docRef.update({ nombre_proyecto: nombre_proyecto });
+
+    res.json({ 
+      mensaje: 'Nombre del proyecto actualizado exitosamente',
+      nombre_proyecto: nombre_proyecto
+    });
+
+  }catch (error){
+    res.status(500).json({ error: 'Error del servidor al intentar actualizar el nombre del proyecto'+ error.message });
+  }
+
+});
+
+//Endpoint PATCH para editar el estado del proyecto
+app.patch('/api/editar/estado/:id', async (req, res) => {
+  try{
+
+    const id = req.params.id;
+    const estado = req.body.estado;
+    const docRef = db.collection('proyectos').doc(id);
+
+    if(estado === undefined){
+      return res.status(400).json({ mensaje: 'El campo "estado" es requerido' });
+    }
+
+    const estadosValidos = ['pendiente', 'en_progreso', 'completado'];
+
+    if (!estadosValidos.includes(estado)) {
+      return res.status(400).json({ mensaje: 'El campo "estado" debe ser pendiente, en_progreso o completado' });
+    }
+
+    const doc = await docRef.get();
+    if (!doc.exists) {
+      return res.status(404).json({ mensaje: 'Proyecto no encontrado' });
+    }
+
+    if (doc.data().estado === estado) {
+      return res.status(400).json({
+        mensaje: "El proyecto ya tiene ese estado"
+      });
+    }
+
+    await docRef.update({ estado: estado });
+
+    res.json({ 
+      mensaje: 'Estado del proyecto actualizado exitosamente',
+      estado: estado
+    });
+
+  }catch (error){
+    res.status(500).json({ error: 'Error del servidor al intentar actualizar el estado del proyecto'+ error.message });
+  }
+
+});
+
+
 // Iniciar el servidor
 app.listen(PORT, () => {
   console.log(`Servidor ejecutándose en http://localhost:${PORT}`);
