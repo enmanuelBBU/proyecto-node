@@ -151,6 +151,24 @@ app.delete('/api/proyectos/:id', async (req, res) => {
   }
 });
 
+//Endpoint para Obtener todos los ítems   
+app.get('/api/items', async (req, res) => {
+  try {
+    const snapshot = await db.collection('items').get();
+    const items = [];
+    snapshot.forEach(doc => {
+      items.push({ id: doc.id, ...doc.data() });
+    });
+    res.status(200).json(items);
+  } catch (error) {
+    res.status(500).json({
+      error: 'Error al obtener los items',
+      detalle: error.message
+    });
+  }
+});
+
+
 // Iniciar el servidor
 app.listen(PORT, () => {
   console.log(`Servidor ejecutándose en http://localhost:${PORT}`);
