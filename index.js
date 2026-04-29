@@ -151,6 +151,52 @@ app.delete('/api/proyectos/:id', async (req, res) => {
   }
 });
 
+//Endpoint para Obtener todos los ítems   
+app.get('/api/items', async (req, res) => {
+  try {
+    const snapshot = await db.collection('items').get();
+    const items = [];
+    snapshot.forEach(doc => {
+      items.push({ id: doc.id, ...doc.data() });
+    });
+    res.status(200).json(items);
+  } catch (error) {
+    res.status(500).json({
+      error: 'Error al obtener los items',
+      detalle: error.message
+    });
+  }
+});
+
+//Calcular materiales de un crafteo    
+app.get('/api/items/:id/materiales', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const snapshot = await db.collection('items').doc(id).get();
+
+    if (!snapshot.exists) {
+      return res.status(404).json({ error: 'Item no encontrado' });
+    }
+    const item = snapshot.data();
+
+    // Obtener solo los ingredientes directos para el crafteo
+    const materialesRequeridos = item.ingredientes_para_calculo || [];
+
+    res.status(200).json({
+      item: item.nombre,
+      id: id,
+      materiales: materialesRequeridos
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: 'Error al calcular materiales',
+      detalle: error.message
+    });
+  }
+});
+
+
+
 // Iniciar el servidor
 app.listen(PORT, () => {
   console.log(`Servidor ejecutándose en http://localhost:${PORT}`);
