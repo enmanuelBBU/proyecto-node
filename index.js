@@ -151,7 +151,6 @@ app.delete('/api/proyectos/:id', async (req, res) => {
   }
 });
 
-<<<<<<< HEAD
 
 //Endpoint PATCH para editar el nombre del proyecto
 app.patch('/api/editar/nombre/:id', async (req, res) => {
@@ -222,8 +221,8 @@ app.patch('/api/editar/estado/:id', async (req, res) => {
   }catch (error){
     res.status(500).json({ error: 'Error del servidor al intentar actualizar el estado del proyecto'+ error.message });
   }
+});
 
-=======
 //Endpoint para Obtener todos los ítems   
 app.get('/api/items', async (req, res) => {
   try {
@@ -274,6 +273,7 @@ app.get('/api/items/:id/materiales', async (req, res) => {
     });
   }
 });
+
 // Endpoint PUT para actualizar un item
 app.put('/api/items/:id', async (req, res) => {
   try {
@@ -353,7 +353,6 @@ app.get('/api/proyectos', async (req, res) => {
       detalle: error.message
     });
   }
->>>>>>> c8719e58c6ee34ad2416fd5c3ab9591ef560956a
 });
 
 // Iniciar el servidor
