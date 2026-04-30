@@ -201,8 +201,86 @@ app.get('/api/items/:id/materiales', async (req, res) => {
     });
   }
 });
+// Endpoint PUT para actualizar un item
+app.put('/api/items/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const itemData = req.body;
+
+    const docRef = db.collection('items').doc(id);
+    const doc = await docRef.get();
+
+    if (!doc.exists) {
+      return res.status(404).json({ error: 'Item no encontrado' });
+    }
+
+    await docRef.update(itemData);
+
+    res.status(200).json({
+      mensaje: 'Item actualizado exitosamente',
+      id: id,
+      data: itemData
+    });
+  } catch (error) {
+    console.error('Error al actualizar el item:', error);
+    res.status(500).json({ error: 'Error del servidor al intentar actualizar el item' });
+  }
+});
+
+// Endpoint PUT para actualizar un proyecto
+app.put('/api/proyectos/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const proyectoData = req.body;
+
+    const docRef = db.collection('proyectos').doc(id);
+    const doc = await docRef.get();
+
+    if (!doc.exists) {
+      return res.status(404).json({ error: 'Proyecto no encontrado' });
+    }
+
+    // Validar estado si está presente en la petición
+    if (proyectoData.estado) {
+      const estadosPermitidos = ['pendiente', 'en progreso', 'completado'];
+      if (!estadosPermitidos.includes(proyectoData.estado.toLowerCase())) {
+        return res.status(400).json({
+          error: `El campo "estado" debe ser uno de: ${estadosPermitidos.join(', ')}`
+        });
+      }
+      proyectoData.estado = proyectoData.estado.toLowerCase();
+    }
+
+    await docRef.update(proyectoData);
+
+    res.status(200).json({
+      mensaje: 'Proyecto actualizado exitosamente',
+      id: id,
+      data: proyectoData
+    });
+  } catch (error) {
+    console.error('Error al actualizar el proyecto:', error);
+    res.status(500).json({ error: 'Error del servidor al intentar actualizar el proyecto' });
+  }
+});
 
 
+// Endpoint para obtener todos los proyectos
+app.get('/api/proyectos', async (req, res) => {
+  try {
+    const snapshot = await db.collection('proyectos').get();
+    const proyectos = [];
+    snapshot.forEach(doc => {
+      proyectos.push({ id: doc.id, ...doc.data() });
+    });
+    res.status(200).json(proyectos);
+  } catch (error) {
+    res.status(500).json({
+      error: 'Error al obtener los proyectos',
+      detalle: error.message
+    });
+  }
+});
 
 // Iniciar el servidor
 app.listen(PORT, () => {
