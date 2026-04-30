@@ -151,6 +151,7 @@ app.delete('/api/proyectos/:id', async (req, res) => {
   }
 });
 
+<<<<<<< HEAD
 
 //Endpoint PATCH para editar el nombre del proyecto
 app.patch('/api/editar/nombre/:id', async (req, res) => {
@@ -222,6 +223,137 @@ app.patch('/api/editar/estado/:id', async (req, res) => {
     res.status(500).json({ error: 'Error del servidor al intentar actualizar el estado del proyecto'+ error.message });
   }
 
+=======
+//Endpoint para Obtener todos los ítems   
+app.get('/api/items', async (req, res) => {
+  try {
+    const snapshot = await db.collection('items').get();
+    const items = [];
+    snapshot.forEach(doc => {
+      items.push({ id: doc.id, ...doc.data() });
+    });
+    res.status(200).json(items);
+  } catch (error) {
+    res.status(500).json({
+      error: 'Error al obtener los items',
+      detalle: error.message
+    });
+  }
+});
+
+//Calcular materiales de un crafteo    
+app.get('/api/items/:id/materiales', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const snapshot = await db.collection('items').doc(id).get();
+
+    if (!snapshot.exists) {
+      return res.status(404).json({ error: 'Item no encontrado' });
+    }
+    const item = snapshot.data();
+
+    const materialesRequeridos = item.ingredientes_para_calculo || [];
+
+    const respuesta = {
+      item: item.nombre,
+      id: id,
+      es_materia_prima: item.es_materia_prima || false,
+      materiales: materialesRequeridos
+    };
+
+    // Si no es materia prima y tiene una matriz de crafteo, la añadimos a la respuesta
+    if (!item.es_materia_prima && item.receta_matriz) {
+      respuesta.receta_matriz = item.receta_matriz;
+    }
+
+    res.status(200).json(respuesta);
+  } catch (error) {
+    res.status(500).json({
+      error: 'Error al calcular materiales',
+      detalle: error.message
+    });
+  }
+});
+// Endpoint PUT para actualizar un item
+app.put('/api/items/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const itemData = req.body;
+
+    const docRef = db.collection('items').doc(id);
+    const doc = await docRef.get();
+
+    if (!doc.exists) {
+      return res.status(404).json({ error: 'Item no encontrado' });
+    }
+
+    await docRef.update(itemData);
+
+    res.status(200).json({
+      mensaje: 'Item actualizado exitosamente',
+      id: id,
+      data: itemData
+    });
+  } catch (error) {
+    console.error('Error al actualizar el item:', error);
+    res.status(500).json({ error: 'Error del servidor al intentar actualizar el item' });
+  }
+});
+
+// Endpoint PUT para actualizar un proyecto
+app.put('/api/proyectos/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const proyectoData = req.body;
+
+    const docRef = db.collection('proyectos').doc(id);
+    const doc = await docRef.get();
+
+    if (!doc.exists) {
+      return res.status(404).json({ error: 'Proyecto no encontrado' });
+    }
+
+    // Validar estado si está presente en la petición
+    if (proyectoData.estado) {
+      const estadosPermitidos = ['pendiente', 'en progreso', 'completado'];
+      if (!estadosPermitidos.includes(proyectoData.estado.toLowerCase())) {
+        return res.status(400).json({
+          error: `El campo "estado" debe ser uno de: ${estadosPermitidos.join(', ')}`
+        });
+      }
+      proyectoData.estado = proyectoData.estado.toLowerCase();
+    }
+
+    await docRef.update(proyectoData);
+
+    res.status(200).json({
+      mensaje: 'Proyecto actualizado exitosamente',
+      id: id,
+      data: proyectoData
+    });
+  } catch (error) {
+    console.error('Error al actualizar el proyecto:', error);
+    res.status(500).json({ error: 'Error del servidor al intentar actualizar el proyecto' });
+  }
+});
+
+
+// Endpoint para obtener todos los proyectos
+app.get('/api/proyectos', async (req, res) => {
+  try {
+    const snapshot = await db.collection('proyectos').get();
+    const proyectos = [];
+    snapshot.forEach(doc => {
+      proyectos.push({ id: doc.id, ...doc.data() });
+    });
+    res.status(200).json(proyectos);
+  } catch (error) {
+    res.status(500).json({
+      error: 'Error al obtener los proyectos',
+      detalle: error.message
+    });
+  }
+>>>>>>> c8719e58c6ee34ad2416fd5c3ab9591ef560956a
 });
 
 // Iniciar el servidor
