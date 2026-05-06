@@ -153,7 +153,7 @@ app.delete('/api/proyectos/:id', async (req, res) => {
 
 
 //Endpoint PATCH para editar el nombre del proyecto
-app.patch('/api/editar/nombre/:id', async (req, res) => {
+app.patch('/api/proyectos/:id/nombre', async (req, res) => {
   try{
 
     const id = req.params.id;
@@ -183,7 +183,7 @@ app.patch('/api/editar/nombre/:id', async (req, res) => {
 });
 
 //Endpoint PATCH para editar el estado del proyecto
-app.patch('/api/editar/estado/:id', async (req, res) => {
+app.patch('/api/proyectos/:id/estado', async (req, res) => {
   try{
 
     const id = req.params.id;
