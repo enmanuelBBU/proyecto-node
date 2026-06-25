@@ -1,3 +1,5 @@
 node_modules/
 craftbuild-63e96-firebase-adminsdk-fbsvc-fa3cd2b205.json
 .env
+.atl/*
+
