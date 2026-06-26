@@ -5,7 +5,7 @@ const admin = require('firebase-admin');
 // Inicializar Firebase Admin
 let serviceAccount;
 try {
-  serviceAccount = require('./craftbuild-63e96-firebase-adminsdk-fbsvc-14ecabbfc6.json');
+  serviceAccount = require('./craftbuild-63e96-firebase-adminsdk-fbsvc-8927be5148.json');
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
   });
