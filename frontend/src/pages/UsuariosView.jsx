@@ -19,10 +19,16 @@ export default function UsuariosView() {
     loadUsuarios();
   }, []);
 
-  // No hay endpoint GET /api/usuarios (lista), así que cargamos desde proyectos o dejamos vacío
-  // Usaremos búsqueda individual por ID
+  // GET /api/usuarios
   async function loadUsuarios() {
-    setLoading(false);
+    try {
+      const data = await usuariosApi.getAll();
+      setUsuarios(data);
+    } catch (error) {
+      addToast('Error al cargar usuarios: ' + error.message, 'error');
+    } finally {
+      setLoading(false);
+    }
   }
 
   // 1. GET /api/usuarios/:id

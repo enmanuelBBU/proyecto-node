@@ -366,6 +366,21 @@ app.get('/api/proyectos', async (req, res) => {
 
 // ================= NEW/UPDATED 10 ENDPOINTS =================
 
+// 0. GET /api/usuarios - Obtiene todos los usuarios registrados.
+app.get('/api/usuarios', async (req, res) => {
+  try {
+    const snapshot = await db.collection('usuario').get();
+    const usuarios = [];
+    snapshot.forEach(doc => {
+      usuarios.push({ id: doc.id, ...formatDocumentData(doc.data()) });
+    });
+    res.status(200).json(usuarios);
+  } catch (error) {
+    console.error('Error al obtener usuarios:', error);
+    res.status(500).json({ error: 'Error del servidor al intentar obtener los usuarios' });
+  }
+});
+
 // 1. GET /api/usuarios/:id - Obtiene la información detallada de un usuario específico mediante su ID.
 app.get('/api/usuarios/:id', async (req, res) => {
   try {

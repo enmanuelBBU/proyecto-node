@@ -25,6 +25,7 @@ async function request(url, options = {}) {
 
 // ===== USUARIOS =====
 export const usuariosApi = {
+  getAll: () => request('/usuarios'),
   getById: (id) => request(`/usuarios/${id}`),
   create: (userData) => request('/usuarios', { method: 'POST', body: userData }),
   replace: (id, userData) => request(`/usuarios/${id}`, { method: 'PUT', body: userData }),
