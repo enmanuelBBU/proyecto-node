@@ -150,7 +150,7 @@ function createBlock(x, y, z, topTex, sideTex, bottomTex, pointLight) {
 }
 const blockCrafteos = createBlock(-2.2, 1.3, 0, texGrassTop, texGrassSide, texDirt, glowGreen);
 const blockConstrucciones = createBlock(0, 1.3, 0, texCraftTop, texCraftSide, texCraftSide, glowBlue);
-const blockPerfil = createBlock(2.2, 1.3, 0, texObsidian, texStone, texStone, glowAmber);
+const blockPerfil = createBlock(2.2, 1.3, 0, texStone, texStone, texStone, glowAmber);
 
 blockDataMap.set(blockCrafteos, { id: 'crafteos', icon: '🪨', label: 'Crafteos', labelEl: labelCrafteos });
 blockDataMap.set(blockConstrucciones, { id: 'construcciones', icon: '🏗️', label: 'Construcciones', labelEl: labelConstrucciones });
@@ -346,6 +346,14 @@ function renderCrafteos() {
       <div class="mc-fld"><label>Seleccionar Item</label>${itemDropdown('f-upd-item-sel', '', 'Elegir...')}</div>
       <div class="mc-fld"><label>Tipo</label><select id="f-upd-prima" class="mc-input"><option value="">Sin cambio</option><option value="true">Materia Prima</option><option value="false">Elaborado</option></select></div>
       <div class="mc-fld"><label>Nuevo Nombre</label><input id="f-upd-nombre" class="mc-input" placeholder="Dejar vacio para no cambiar"></div>
+      <div class="mc-fld"><label>Stock</label><input id="f-upd-stock" class="mc-input" type="number" value="" min="0" placeholder="Dejar vacio para no cambiar"></div>
+      <div class="mc-fld"><label>Ingredientes</label></div>
+      <div id="upd-ingredientes-container" style="margin-bottom:6px"></div>
+      <button class="mc-btn sm" onclick="window._addUpdIngrediente()" style="margin-bottom:10px">+ Agregar Ingrediente</button>
+      <div class="mc-fld"><label>Receta (Grid 3x3)</label></div>
+      <div class="craft-grid" id="upd-craft-grid">
+        ${Array.from({length:9}, (_,i) => '<div class="craft-slot"><select id="upd-slot-'+i+'" class="mc-input" style="width:100%;height:100%;border:none;background:transparent;font-size:0.4rem"><option value="">-</option></select></div>').join('')}
+      </div>
       <button class="mc-btn gold wide" onclick="window._updateItem()">Actualizar</button>
       <div id="r-update-item" class="mc-result"></div>
     </div>
@@ -369,11 +377,14 @@ function renderCrafteos() {
   setTimeout(() => {
     const gridSelects = document.querySelectorAll('#craft-grid select');
     gridSelects.forEach(s => { cachedItems.forEach(item => { s.innerHTML += '<option value="' + item.id + '">' + (item.nombre || item.id) + '</option>'; }); });
+    const updGridSelects = document.querySelectorAll('#upd-craft-grid select');
+    updGridSelects.forEach(s => { cachedItems.forEach(item => { s.innerHTML += '<option value="' + item.id + '">' + (item.nombre || item.id) + '</option>'; }); });
     window._addIngrediente();
   }, 100);
 }
 
 let ingredienteCount = 0;
+let updIngredienteCount = 0;
 window._addIngrediente = () => {
   const c = document.getElementById('ingredientes-container');
   const idx = ingredienteCount++;
@@ -383,13 +394,23 @@ window._addIngrediente = () => {
   c.appendChild(div);
 };
 
+window._addUpdIngrediente = () => {
+  const c = document.getElementById('upd-ingredientes-container');
+  if (!c) return;
+  const idx = updIngredienteCount++;
+  const div = document.createElement('div');
+  div.className = 'mc-fld-row'; div.style.marginBottom = '4px'; div.id = 'upd-ing-row-' + idx;
+  div.innerHTML = '<div class="mc-fld" style="flex:1"><select id="upd-ing-item-' + idx + '" class="mc-input"><option value="">Item...</option>' + cachedItems.map(item => '<option value="' + item.id + '">' + (item.nombre || item.id) + '</option>').join('') + '</select></div><div class="mc-fld" style="max-width:80px"><input id="upd-ing-cant-' + idx + '" class="mc-input" type="number" value="1" min="1"></div><button class="mc-btn red sm" onclick="document.getElementById(\'upd-ing-row-' + idx + '\').remove()" style="padding:6px 8px;font-size:0.5rem">X</button>';
+  c.appendChild(div);
+};
+
 // === CONSTRUCCIONES ===
 function renderConstrucciones() {
   panelContent.innerHTML = `
     <div class="mc-card">
       <div class="mc-label">Mis Construcciones</div>
-      <button class="mc-btn green wide" onclick="window._listProyectos()">Ver Proyectos</button>
-      <div id="r-proyectos-list" class="mc-result"></div>
+      <button class="mc-btn green wide" id="btn-toggle-proyectos" onclick="window._toggleProyectos()">Ver Proyectos</button>
+      <div id="r-proyectos-list"></div>
     </div>
 
     <div class="mc-card">
@@ -408,14 +429,14 @@ function renderConstrucciones() {
     <div class="mc-card">
       <div class="mc-label">Gestionar Proyecto</div>
       <div class="mc-fld"><label>Seleccionar Proyecto</label><select id="f-gest-proy-sel" class="mc-input"><option value="">Elegir...</option></select></div>
-      <div style="display:flex;gap:8px;margin-top:6px">
+      <div class="mc-fld-row">
         <div class="mc-fld" style="flex:1"><label>Nuevo Nombre</label><input id="f-patch-nombre" class="mc-input" placeholder="Nuevo nombre..."></div>
         <div class="mc-fld" style="flex:1"><label>Nuevo Estado</label><select id="f-patch-estado" class="mc-input"><option value="">Sin cambio</option><option value="pendiente">Pendiente</option><option value="en_progreso">En Progreso</option><option value="completado">Completado</option></select></div>
       </div>
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <button class="mc-btn gold sm" style="flex:1" onclick="window._patchNombre()">Cambiar Nombre</button>
+      <div class="mc-fld-row">
+        <button class="mc-btn gold sm" style="flex:1" onclick="window._patchNombre()">Renombrar</button>
         <button class="mc-btn gold sm" style="flex:1" onclick="window._patchEstado()">Cambiar Estado</button>
-        <button class="mc-btn red sm" style="flex:1" onclick="window._deleteProyectoFromGest()">Demoler</button>
+        <button class="mc-btn red sm" style="flex:1" onclick="window._deleteProyectoFromGest()">Eliminar</button>
       </div>
       <div id="r-update-proyecto" class="mc-result"></div>
     </div>
@@ -461,6 +482,45 @@ function renderConstrucciones() {
   }, 100);
 }
 
+// Accordion toggle
+window.toggleAccordion = (id) => {
+  const target = document.getElementById(id);
+  if (!target) return;
+  const parent = target.closest('.accordion-item');
+  const isOpen = parent.classList.contains('open');
+  document.querySelectorAll('.accordion-item.open').forEach(el => {
+    el.classList.remove('open');
+    el.querySelector('.accordion-body').classList.remove('active');
+  });
+  if (!isOpen) {
+    parent.classList.add('open');
+    target.classList.add('active');
+  }
+};
+
+window._verMaterialesProyecto = async (proyectoId) => {
+  try {
+    const { ok, data } = await api('GET', '/proyectos/' + proyectoId + '/items');
+    const container = document.getElementById('r-items-' + proyectoId);
+    if (!container) return;
+    if (ok && Array.isArray(data)) {
+      if (data.length === 0) {
+        container.innerHTML = '<div style="padding:6px;font-size:0.55rem;color:var(--mc-text-muted)">Sin materiales asignados</div>';
+        return;
+      }
+      container.innerHTML = data.map(item =>
+        '<div class="item-row" style="margin:2px 0;padding:4px 8px">' +
+        '<div class="item-icon">📦</div>' +
+        '<div class="item-detail"><div class="item-name">' + (item.nombre || item.item_id || '?') + '</div>' +
+        '<div class="item-meta">Cant: ' + (item.cantidad || '-') + (item.error ? ' <span class="tag warn">NO ENCONTRADO</span>' : '') +
+        '</div></div></div>'
+      ).join('');
+    } else {
+      container.innerHTML = '<div style="padding:6px;font-size:0.55rem;color:var(--mc-red)">Error al cargar</div>';
+    }
+  } catch (e) { console.error(e); }
+};
+
 let objetivoCount = 0;
 window._addObjetivo = () => {
   const c = document.getElementById('objetivos-container');
@@ -472,8 +532,25 @@ window._addObjetivo = () => {
 };
 
 // === PERFIL ===
-function renderPerfil() {
+async function renderPerfil() {
+  // Obtener datos actualizados del servidor
+  if (currentUser) {
+    try {
+      const { ok, data } = await api('GET', '/usuarios/' + currentUser.id);
+      if (ok && data) {
+        currentUser.nombre = data.nombre;
+        currentUser.email = data.email;
+        currentUser.rol = data.rol;
+        currentUser.fecha_registro = data.fecha_registro;
+        saveSession(currentUser);
+        updateUserChip();
+      }
+    } catch (e) {
+      console.error('Error al obtener datos del perfil:', e);
+    }
+  }
   const u = currentUser;
+  const isAdmin = u && u.rol === 'admin';
   panelContent.innerHTML = `
     <div class="mc-card">
       <div class="mc-label">Mi Perfil</div>
@@ -483,6 +560,7 @@ function renderPerfil() {
           <div style="font-size:0.85rem;color:#FFF">${u ? u.nombre : 'Invitado'}</div>
           <div style="font-size:0.55rem;color:var(--mc-text-muted);margin-top:4px">ID: ${u ? u.id : '-'}</div>
           <div style="font-size:0.55rem;color:var(--mc-text-muted)">Email: ${u ? u.email : '-'}</div>
+          ${isAdmin ? '<div style="font-size:0.55rem;color:var(--mc-gold)">Rol: ADMIN</div>' : ''}
         </div>
       </div>
     </div>
@@ -502,6 +580,14 @@ function renderPerfil() {
     </div>
 
     <div class="mc-card">
+      <div class="mc-label">Cambiar Contrasena</div>
+      <div class="mc-fld"><label>Contrasena Actual</label><input id="f-perfil-pass-actual" class="mc-input" type="password" placeholder="******"></div>
+      <div class="mc-fld"><label>Nueva Contrasena</label><input id="f-perfil-pass-nueva" class="mc-input" type="password" placeholder="Min. 6 caracteres"></div>
+      <button class="mc-btn gold wide" onclick="window._patchUsuarioPassword()">Actualizar Contrasena</button>
+      <div id="r-perfil-password" class="mc-result"></div>
+    </div>
+
+    <div class="mc-card">
       <div class="mc-label">Reemplazar Perfil Completo</div>
       <div class="mc-fld"><label>Nombre</label><input id="f-perfil-put-nombre" class="mc-input" placeholder="Nuevo nombre"></div>
       <div class="mc-fld"><label>Email</label><input id="f-perfil-put-email" class="mc-input" placeholder="nuevo@email.com"></div>
@@ -515,6 +601,14 @@ function renderPerfil() {
       <button class="mc-btn red wide" onclick="window._deleteUsuario()">Eliminar Mi Cuenta</button>
       <div id="r-perfil-delete" class="mc-result"></div>
     </div>
+
+    ${isAdmin ? `
+    <div class="mc-card" style="border-color:var(--mc-gold)">
+      <div class="mc-label" style="color:var(--mc-gold)">Panel de Admin</div>
+      <div id="r-admin-user-list"></div>
+      <button class="mc-btn gold wide" onclick="window._loadAdminUsers()">Cargar Usuarios</button>
+    </div>
+    ` : ''}
 
     <button class="mc-btn red wide" style="margin-top:12px" onclick="window._logout()">Cerrar Sesion</button>
   `;
@@ -613,6 +707,27 @@ window._updateItem = async () => {
     if (tipo) body.es_materia_prima = tipo === 'true';
     const nombre = $v('f-upd-nombre');
     if (nombre) body.nombre = nombre;
+    const stockVal = document.getElementById('f-upd-stock')?.value;
+    if (stockVal !== '') {
+      const parsed = parseInt(stockVal);
+      if (!isNaN(parsed) && parsed >= 0) body.stock = parsed;
+    }
+    // Build ingredientes from update dynamic list
+    const ingredientes = [];
+    for (let i = 0; i < updIngredienteCount; i++) {
+      const itemId = document.getElementById('upd-ing-item-' + i)?.value;
+      const cant = parseInt(document.getElementById('upd-ing-cant-' + i)?.value) || 0;
+      if (itemId && cant > 0) ingredientes.push({ item_id: itemId, cantidad: cant });
+    }
+    if (ingredientes.length > 0) body.ingredientes_para_calculo = ingredientes;
+    // Build recipe grid
+    const slots = [];
+    for (let i = 0; i < 9; i++) {
+      const v = document.getElementById('upd-slot-' + i)?.value;
+      slots.push(v || null);
+    }
+    const hasRecipe = slots.some(s => s !== null);
+    if (hasRecipe) body.receta_matriz = slots;
     if (Object.keys(body).length === 0) return showToast('Selecciona al menos un cambio', 'error');
     const { ok, data } = await api('PUT', '/items/' + id, body);
     if (ok) {
@@ -662,21 +777,42 @@ window._listProyectos = async () => {
     const { ok, data } = await api('GET', '/proyectos');
     if (ok && Array.isArray(data)) {
       panelBadge.textContent = data.length;
+      const ec = { 'pendiente': 'pendiente', 'en progreso': 'en-progreso', 'en_progreso': 'en-progreso', 'completado': 'completado' };
       if (data.length === 0) {
-        document.getElementById('r-proyectos-list').innerHTML = '<div class="mc-result visible"><div class="empty-state">No hay proyectos. Inicia uno!</div></div>';
+        document.getElementById('r-proyectos-list').innerHTML = '<div class="empty-state">No hay proyectos. Crea uno!</div>';
         return;
       }
-      const ec = { 'pendiente': 'pendiente', 'en progreso': 'en-progreso', 'en_progreso': 'en-progreso', 'completado': 'completado' };
       const html = data.map(p =>
-        '<div class="item-row"><div class="item-icon">🏗️</div>' +
-        '<div class="item-detail"><div class="item-name">' + (p.nombre_proyecto || '?') + '</div>' +
+        '<div class="item-row" style="flex-wrap:wrap">' +
+        '<div class="item-icon">🏗️</div>' +
+        '<div class="item-detail" style="flex:1;min-width:120px">' +
+        '<div class="item-name">' + (p.nombre_proyecto || '?') + '</div>' +
         '<div class="item-meta">' + p.id + ' | ' + (p.usuario_id || '-') +
         ' <span class="estado-tag ' + (ec[p.estado] || '') + '">' + (p.estado || '-') + '</span>' +
-        '</div></div></div>'
+        '</div></div>' +
+        '<div style="display:flex;gap:4px;width:100%;margin-top:4px">' +
+        '<button class="mc-btn blue sm" style="flex:1" onclick="window._verMaterialesProyecto(\'' + p.id + '\')">Materiales</button>' +
+        '<button class="mc-btn red sm" style="flex:1" onclick="window._deleteProyecto(\'' + p.id + '\')">Eliminar</button>' +
+        '</div>' +
+        '<div id="r-items-' + p.id + '" style="width:100%;margin-top:4px"></div>' +
+        '</div>'
       ).join('');
-      document.getElementById('r-proyectos-list').innerHTML = '<div class="mc-result visible success">' + html + '</div>';
+      document.getElementById('r-proyectos-list').innerHTML = '<div style="margin-bottom:6px;font-size:0.55rem;color:var(--mc-text-muted)">' + data.length + ' proyecto(s)</div>' + html;
     } else { document.getElementById('r-proyectos-list').innerHTML = '<div class="mc-result visible error">Error al cargar</div>'; }
   } catch (e) { document.getElementById('r-proyectos-list').innerHTML = '<div class="mc-result visible error">Error: ' + e.message + '</div>'; }
+};
+
+window._toggleProyectos = async () => {
+  const btn = document.getElementById('btn-toggle-proyectos');
+  const container = document.getElementById('r-proyectos-list');
+  if (!btn || !container) return;
+  if (btn.textContent.trim() === 'Ocultar Proyectos') {
+    container.innerHTML = '';
+    btn.textContent = 'Ver Proyectos';
+    return;
+  }
+  await window._listProyectos();
+  btn.textContent = 'Ocultar Proyectos';
 };
 
 window._createProyecto = async () => {
@@ -700,6 +836,7 @@ window._createProyecto = async () => {
     if (ok) {
       document.getElementById('r-proyecto-create').innerHTML = '<div class="mc-result visible success">' + formatOutput(data) + '</div>';
       showToast('Construccion iniciada!', 'success');
+      window._listProyectos();
     } else {
       document.getElementById('r-proyecto-create').innerHTML = '<div class="mc-result visible error">' + (data.error || 'Error') + '</div>';
     }
@@ -712,7 +849,7 @@ window._patchNombre = async () => {
   if (!id) return showToast('Selecciona un proyecto', 'error');
   try {
     const { ok, data } = await api('PATCH', '/editar/nombre/' + id, { nombre_proyecto: nombre });
-    if (ok) { document.getElementById('r-update-proyecto').innerHTML = '<div class="mc-result visible success">' + formatOutput(data) + '</div>'; showToast('Nombre cambiado!', 'success'); }
+    if (ok) { document.getElementById('r-update-proyecto').innerHTML = '<div class="mc-result visible success">' + formatOutput(data) + '</div>'; showToast('Nombre cambiado!', 'success'); window._listProyectos(); }
     else { document.getElementById('r-update-proyecto').innerHTML = '<div class="mc-result visible error">' + (data.error || 'Error') + '</div>'; }
   } catch (e) { document.getElementById('r-update-proyecto').innerHTML = '<div class="mc-result visible error">Error: ' + e.message + '</div>'; }
 };
@@ -723,18 +860,28 @@ window._patchEstado = async () => {
   if (!id || !estado) return showToast('Selecciona proyecto y estado', 'error');
   try {
     const { ok, data } = await api('PATCH', '/editar/estado/' + id, { estado });
-    if (ok) { document.getElementById('r-update-proyecto').innerHTML = '<div class="mc-result visible success">' + formatOutput(data) + '</div>'; showToast('Estado cambiado!', 'success'); }
+    if (ok) { document.getElementById('r-update-proyecto').innerHTML = '<div class="mc-result visible success">' + formatOutput(data) + '</div>'; showToast('Estado cambiado!', 'success'); window._listProyectos(); }
     else { document.getElementById('r-update-proyecto').innerHTML = '<div class="mc-result visible error">' + (data.error || 'Error') + '</div>'; }
   } catch (e) { document.getElementById('r-update-proyecto').innerHTML = '<div class="mc-result visible error">Error: ' + e.message + '</div>'; }
+};
+
+window._deleteProyecto = async (proyectoId) => {
+  if (!proyectoId) return showToast('ID de proyecto invalido', 'error');
+  if (!confirm('Eliminar este proyecto permanentemente?')) return;
+  try {
+    const { ok, data } = await api('DELETE', '/proyectos/' + proyectoId);
+    if (ok) { showToast('Proyecto eliminado!', 'success'); window._listProyectos(); }
+    else { showToast(data.error || 'Error', 'error'); }
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
 };
 
 window._deleteProyectoFromGest = async () => {
   const id = $sel('f-gest-proy-sel');
   if (!id) return showToast('Selecciona un proyecto', 'error');
-  if (!confirm('Demoler este proyecto permanentemente?')) return;
+  if (!confirm('Eliminar este proyecto permanentemente?')) return;
   try {
     const { ok, data } = await api('DELETE', '/proyectos/' + id);
-    if (ok) { document.getElementById('r-update-proyecto').innerHTML = '<div class="mc-result visible success">' + formatOutput(data) + '</div>'; showToast('Construccion demolida!', 'success'); }
+    if (ok) { document.getElementById('r-update-proyecto').innerHTML = '<div class="mc-result visible success">' + formatOutput(data) + '</div>'; showToast('Proyecto eliminado!', 'success'); window._listProyectos(); }
     else { document.getElementById('r-update-proyecto').innerHTML = '<div class="mc-result visible error">' + (data.error || 'Error') + '</div>'; }
   } catch (e) { document.getElementById('r-update-proyecto').innerHTML = '<div class="mc-result visible error">Error: ' + e.message + '</div>'; }
 };
@@ -802,7 +949,7 @@ window._patchUsuarioNombre = async () => {
   if (!nombre) return showToast('Ingresa un nombre', 'error');
   try {
     const { ok, data } = await api('PATCH', '/usuarios/' + currentUser.id, { nombre });
-    if (ok) { currentUser.nombre = nombre; saveSession(currentUser); updateUserChip(); }
+    if (ok) { currentUser.nombre = nombre; saveSession(currentUser); updateUserChip(); renderPerfil(); }
     document.getElementById('r-perfil-patch').innerHTML = '<div class="mc-result visible ' + (ok ? 'success' : 'error') + '">' + (ok ? 'Nombre actualizado exitosamente!' : (data.error || 'Error')) + '</div>';
     if (ok) showToast('Nombre actualizado!', 'success');
   } catch (e) { document.getElementById('r-perfil-patch').innerHTML = '<div class="mc-result visible error">Error: ' + e.message + '</div>'; }
@@ -814,10 +961,53 @@ window._patchUsuarioEmail = async () => {
   if (!email) return showToast('Ingresa un email', 'error');
   try {
     const { ok, data } = await api('PATCH', '/usuarios/' + currentUser.id, { email });
-    if (ok) { currentUser.email = email; saveSession(currentUser); }
+    if (ok) { currentUser.email = email; saveSession(currentUser); renderPerfil(); }
     document.getElementById('r-perfil-email').innerHTML = '<div class="mc-result visible ' + (ok ? 'success' : 'error') + '">' + (ok ? 'Email actualizado exitosamente!' : (data.error || 'Error')) + '</div>';
     if (ok) showToast('Email actualizado!', 'success');
   } catch (e) { document.getElementById('r-perfil-email').innerHTML = '<div class="mc-result visible error">Error: ' + e.message + '</div>'; }
+};
+
+window._patchUsuarioPassword = async () => {
+  if (!currentUser) return showToast('Sin sesion', 'error');
+  const password_actual = document.getElementById('f-perfil-pass-actual')?.value.trim();
+  const password_nueva = document.getElementById('f-perfil-pass-nueva')?.value.trim();
+  if (!password_actual || !password_nueva) return showToast('Ambos campos son obligatorios', 'error');
+  if (password_nueva.length < 6) return showToast('La nueva contrasena debe tener al menos 6 caracteres', 'error');
+  try {
+    const { ok, data } = await api('PATCH', '/usuarios/' + currentUser.id + '/password', { password_actual, password_nueva });
+    document.getElementById('r-perfil-password').innerHTML = '<div class="mc-result visible ' + (ok ? 'success' : 'error') + '">' + (ok ? 'Contrasena actualizada exitosamente!' : (data.error || 'Error')) + '</div>';
+    if (ok) { showToast('Contrasena actualizada!', 'success'); document.getElementById('f-perfil-pass-actual').value = ''; document.getElementById('f-perfil-pass-nueva').value = ''; }
+  } catch (e) { document.getElementById('r-perfil-password').innerHTML = '<div class="mc-result visible error">Error: ' + e.message + '</div>'; }
+};
+
+window._loadAdminUsers = async () => {
+  if (!currentUser || currentUser.rol !== 'admin') return showToast('Solo administradores', 'error');
+  try {
+    const { ok, data } = await api('GET', '/usuarios');
+    if (ok && Array.isArray(data)) {
+      if (data.length === 0) { document.getElementById('r-admin-user-list').innerHTML = '<div class="empty-state">No hay usuarios</div>'; return; }
+      const html = data.map(u =>
+        '<div class="item-row" style="margin-bottom:4px">' +
+        '<div class="item-icon">👤</div>' +
+        '<div class="item-detail" style="flex:1">' +
+        '<div class="item-name">' + (u.nombre || '?') + '</div>' +
+        '<div class="item-meta">' + u.id + ' | ' + (u.email || '') + (u.rol === 'admin' ? ' | ADMIN' : '') + '</div></div>' +
+        (u.id !== currentUser.id ? '<button class="mc-btn red sm" onclick="window._adminDeleteUser(\'' + u.id + '\')">Eliminar</button>' : '') +
+        '</div>'
+      ).join('');
+      document.getElementById('r-admin-user-list').innerHTML = '<div style="margin-bottom:6px;font-size:0.5rem;color:var(--mc-text-muted)">Usuarios registrados:</div>' + html;
+    } else { document.getElementById('r-admin-user-list').innerHTML = '<div class="mc-result visible error">Error al cargar</div>'; }
+  } catch (e) { document.getElementById('r-admin-user-list').innerHTML = '<div class="mc-result visible error">Error: ' + e.message + '</div>'; }
+};
+
+window._adminDeleteUser = async (userId) => {
+  if (!currentUser || currentUser.rol !== 'admin') return showToast('Solo administradores', 'error');
+  if (!confirm('Eliminar este usuario y todos sus proyectos?')) return;
+  try {
+    const { ok, data } = await api('DELETE', '/usuarios/' + userId, { admin_id: currentUser.id });
+    if (ok) { showToast('Usuario eliminado!', 'success'); window._loadAdminUsers(); }
+    else { showToast(data.error || 'Error al eliminar', 'error'); }
+  } catch (e) { showToast('Error: ' + e.message, 'error'); }
 };
 
 window._replaceUsuario = async () => {
@@ -828,7 +1018,7 @@ window._replaceUsuario = async () => {
     const fecha = $v('f-perfil-put-fecha');
     if (!nombre || !email || !fecha) return showToast('Todos los campos son obligatorios', 'error');
     const { ok, data } = await api('PUT', '/usuarios/' + currentUser.id, { nombre, email, fecha_registro: new Date(fecha).toISOString() });
-    if (ok) { currentUser.nombre = nombre; currentUser.email = email; saveSession(currentUser); updateUserChip(); showToast('Perfil reemplazado!', 'success'); }
+    if (ok) { currentUser.nombre = nombre; currentUser.email = email; saveSession(currentUser); updateUserChip(); showToast('Perfil reemplazado!', 'success'); renderPerfil(); }
     document.getElementById('r-perfil-put').innerHTML = '<div class="mc-result visible ' + (ok ? 'success' : 'error') + '">' + (ok ? formatOutput(data) : (data.error || 'Error')) + '</div>';
   } catch (e) { document.getElementById('r-perfil-put').innerHTML = '<div class="mc-result visible error">Error: ' + e.message + '</div>'; }
 };
@@ -861,10 +1051,10 @@ function showLoginOverlay() { loginOverlay.classList.remove('hidden'); hintText.
 function hideLoginOverlay() { loginOverlay.classList.add('hidden'); hintText.style.opacity = currentUser ? '1' : '0'; }
 
 function switchLoginTab(tab) {
+  document.getElementById('login-error').innerHTML = '';
   if (tab === 'existing') {
     loginOptExisting.classList.add('active'); loginOptNew.classList.remove('active');
     loginSectionExisting.classList.add('active'); loginSectionNew.classList.remove('active');
-    loadUserList();
   } else {
     loginOptNew.classList.add('active'); loginOptExisting.classList.remove('active');
     loginSectionNew.classList.add('active'); loginSectionExisting.classList.remove('active');
@@ -873,40 +1063,36 @@ function switchLoginTab(tab) {
 loginOptExisting.addEventListener('click', () => switchLoginTab('existing'));
 loginOptNew.addEventListener('click', () => switchLoginTab('new'));
 
-async function loadUserList() {
-  loginUserList.innerHTML = '<div class="empty-state">Cargando usuarios...</div>';
+document.getElementById('login-do-login').addEventListener('click', async () => {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value.trim();
+  const errorEl = document.getElementById('login-error');
+  if (!email || !password) { errorEl.innerHTML = '<div class="mc-result visible error">Email y contrasena son obligatorios</div>'; return; }
   try {
-    const { ok, data } = await api('GET', '/usuarios');
-    if (ok && Array.isArray(data)) {
-      if (data.length === 0) { loginUserList.innerHTML = '<div class="empty-state">No hay usuarios registrados.<br>Crea uno en "Usuario Nuevo"</div>'; return; }
-      loginUserList.innerHTML = data.map(u =>
-        '<div class="login-user-item" data-id="' + u.id + '">' +
-        '<div class="u-avatar">👤</div>' +
-        '<div class="u-info"><div class="u-name">' + (u.nombre || '?') + '</div>' +
-        '<div class="u-meta">ID: ' + u.id + ' | ' + (u.email || '') + '</div></div></div>'
-      ).join('');
-      loginUserList.querySelectorAll('.login-user-item').forEach(el => {
-        el.addEventListener('click', async () => {
-          const id = el.dataset.id;
-          try {
-            const { ok, data } = await api('GET', '/usuarios/' + id);
-            if (ok) { saveSession({ id: data.id, nombre: data.nombre, email: data.email }); updateUserChip(); hideLoginOverlay(); showToast('Bienvenido, ' + data.nombre + '!', 'success'); }
-            else { showToast('Usuario no encontrado', 'error'); loadUserList(); }
-          } catch (e) { showToast('Error al conectar', 'error'); }
-        });
-      });
-    } else { loginUserList.innerHTML = '<div class="empty-state">Error al cargar usuarios</div>'; }
-  } catch (e) { loginUserList.innerHTML = '<div class="empty-state">Error de conexion</div>'; }
-}
+    const { ok, data } = await api('POST', '/login', { email, password });
+    if (ok && data.data) {
+      saveSession({ id: data.data.id, nombre: data.data.nombre, email: data.data.email, rol: data.data.rol });
+      updateUserChip(); hideLoginOverlay(); showToast('Bienvenido, ' + data.data.nombre + '!', 'success');
+    } else {
+      errorEl.innerHTML = '<div class="mc-result visible error">' + (data.error || 'Credenciales invalidas') + '</div>';
+    }
+  } catch (e) { errorEl.innerHTML = '<div class="mc-result visible error">Error de conexion</div>'; }
+});
 
 document.getElementById('login-do-register').addEventListener('click', async () => {
   const nombre = document.getElementById('reg-nombre').value.trim();
   const email = document.getElementById('reg-email').value.trim();
-  if (!nombre || !email) return showToast('Nombre y email son obligatorios', 'error');
+  const password = document.getElementById('reg-password').value.trim();
+  if (!nombre || !email || !password) return showToast('Nombre, email y contrasena son obligatorios', 'error');
+  if (password.length < 6) return showToast('La contrasena debe tener al menos 6 caracteres', 'error');
   try {
-    const { ok, data } = await api('POST', '/usuarios', { nombre, email });
-    if (ok) { saveSession({ id: data.id, nombre: data.data.nombre, email: data.data.email }); updateUserChip(); hideLoginOverlay(); showToast('Registrado! Bienvenido, ' + data.data.nombre + '!', 'success'); }
-    else { showToast(data.error || 'Error al registrar', 'error'); }
+    const { ok, data } = await api('POST', '/usuarios', { nombre, email, password });
+    if (ok && data.data) {
+      saveSession({ id: data.id, nombre: data.data.nombre, email: data.data.email, rol: data.data.rol });
+      updateUserChip(); hideLoginOverlay(); showToast('Registrado! Bienvenido, ' + data.data.nombre + '!', 'success');
+    } else {
+      showToast(data.error || 'Error al registrar', 'error');
+    }
   } catch (e) { showToast('Error al conectar', 'error'); }
 });
 

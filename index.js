@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const admin = require('firebase-admin');
+const bcrypt = require('bcrypt');
 const path = require('path');
 
 const serviceAccount = require('./craftbuild-63e96-firebase-adminsdk-fbsvc-fa3cd2b205.json');
@@ -344,7 +345,7 @@ app.get('/api/items/:id/materiales', async (req, res) => {
   }
 });
 
-// Endpoint PUT para actualizar un item
+// Endpoint PUT para actualizar un item (materiales incluidos)
 app.put('/api/items/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -355,6 +356,19 @@ app.put('/api/items/:id', async (req, res) => {
 
     if (!doc.exists) {
       return res.status(404).json({ error: 'Item no encontrado' });
+    }
+
+    if (itemData.receta_matriz !== undefined && !validateRecetaMatriz(itemData.receta_matriz)) {
+      return res.status(400).json({ error: 'La receta_matriz debe ser un arreglo de exactamente 9 elementos (strings o null)' });
+    }
+    if (itemData.ingredientes_para_calculo !== undefined && !validateIngredientes(itemData.ingredientes_para_calculo)) {
+      return res.status(400).json({ error: 'Los ingredientes_para_calculo deben ser un arreglo de objetos { item_id, cantidad }' });
+    }
+
+    if (itemData.es_materia_prima === true) {
+      if (itemData.receta_matriz && itemData.receta_matriz.some(s => s !== null)) {
+        return res.status(400).json({ error: 'Una materia prima no puede tener receta_matriz' });
+      }
     }
 
     await docRef.update(itemData);
@@ -427,13 +441,15 @@ app.get('/api/proyectos', async (req, res) => {
 
 // ===================== NUEVOS ENDPOINTS =====================
 
-// 0. GET /api/usuarios — Obtener todos los usuarios
+// 0. GET /api/usuarios — Obtener todos los usuarios (sin password)
 app.get('/api/usuarios', async (req, res) => {
   try {
     const snapshot = await db.collection('usuario').get();
     const usuarios = [];
     snapshot.forEach(doc => {
-      usuarios.push({ id: doc.id, ...formatDocumentData(doc.data()) });
+      const data = formatDocumentData(doc.data());
+      delete data.password;
+      usuarios.push({ id: doc.id, ...data });
     });
     res.status(200).json(usuarios);
   } catch (error) {
@@ -442,7 +458,7 @@ app.get('/api/usuarios', async (req, res) => {
   }
 });
 
-// 1. GET /api/usuarios/:id — Obtener usuario por ID
+// 1. GET /api/usuarios/:id — Obtener usuario por ID (sin password)
 app.get('/api/usuarios/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -450,7 +466,9 @@ app.get('/api/usuarios/:id', async (req, res) => {
     if (!doc.exists) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
-    res.status(200).json({ id: doc.id, ...formatDocumentData(doc.data()) });
+    const data = formatDocumentData(doc.data());
+    delete data.password;
+    res.status(200).json({ id: doc.id, ...data });
   } catch (error) {
     console.error('Error al obtener usuario:', error);
     res.status(500).json({ error: 'Error del servidor al intentar obtener el usuario' });
@@ -482,12 +500,15 @@ app.get('/api/proyectos/:id/items', async (req, res) => {
   }
 });
 
-// 3. POST /api/usuarios — Registrar nuevo usuario
+// 3. POST /api/usuarios — Registrar nuevo usuario (con password y rol por defecto)
 app.post('/api/usuarios', async (req, res) => {
   try {
-    const { id, nombre, email, fecha_registro } = req.body;
-    if (!nombre || !email) {
-      return res.status(400).json({ error: 'Los campos "nombre" e "email" son requeridos' });
+    const { id, nombre, email, password, fecha_registro } = req.body;
+    if (!nombre || !email || !password) {
+      return res.status(400).json({ error: 'Los campos "nombre", "email" y "password" son requeridos' });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'La contrasena debe tener al menos 6 caracteres' });
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
@@ -512,16 +533,86 @@ app.post('/api/usuarios', async (req, res) => {
     } else {
       registroTimestamp = admin.firestore.Timestamp.now();
     }
-    const nuevoUsuario = { nombre, email, fecha_registro: registroTimestamp };
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    const nuevoUsuario = { nombre, email, password: hashedPassword, fecha_registro: registroTimestamp, rol: 'usuario' };
     await db.collection('usuario').doc(docId).set(nuevoUsuario);
+    const respuesta = { nombre, email, fecha_registro: formatDocumentData(registroTimestamp), rol: 'usuario' };
     res.status(201).json({
       mensaje: 'Usuario registrado exitosamente',
       id: docId,
-      data: formatDocumentData(nuevoUsuario)
+      data: respuesta
     });
   } catch (error) {
     console.error('Error al registrar usuario:', error);
     res.status(500).json({ error: 'Error del servidor al intentar registrar el usuario' });
+  }
+});
+
+// Endpoint POST /api/login — Iniciar sesion con email y password
+app.post('/api/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Los campos "email" y "password" son requeridos' });
+    }
+    const snapshot = await db.collection('usuario').where('email', '==', email).get();
+    if (snapshot.empty) {
+      return res.status(401).json({ error: 'Credenciales invalidas' });
+    }
+    const doc = snapshot.docs[0];
+    const userData = doc.data();
+    const passwordValida = await bcrypt.compare(password, userData.password);
+    if (!passwordValida) {
+      return res.status(401).json({ error: 'Credenciales invalidas' });
+    }
+    res.status(200).json({
+      mensaje: 'Inicio de sesion exitoso',
+      id: doc.id,
+      data: {
+        id: doc.id,
+        nombre: userData.nombre,
+        email: userData.email,
+        fecha_registro: formatDocumentData(userData.fecha_registro),
+        rol: userData.rol || 'usuario'
+      }
+    });
+  } catch (error) {
+    console.error('Error al iniciar sesion:', error);
+    res.status(500).json({ error: 'Error del servidor al intentar iniciar sesion' });
+  }
+});
+
+// Endpoint PATCH /api/usuarios/:id/password — Cambiar contrasena
+app.patch('/api/usuarios/:id/password', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { password_actual, password_nueva } = req.body;
+    if (!password_actual || !password_nueva) {
+      return res.status(400).json({ error: 'Los campos "password_actual" y "password_nueva" son requeridos' });
+    }
+    if (password_nueva.length < 6) {
+      return res.status(400).json({ error: 'La nueva contrasena debe tener al menos 6 caracteres' });
+    }
+    const docRef = db.collection('usuario').doc(id);
+    const doc = await docRef.get();
+    if (!doc.exists) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+    const userData = doc.data();
+    const passwordValida = await bcrypt.compare(password_actual, userData.password);
+    if (!passwordValida) {
+      return res.status(401).json({ error: 'La contrasena actual no es correcta' });
+    }
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password_nueva, salt);
+    await docRef.update({ password: hashedPassword });
+    res.status(200).json({
+      mensaje: 'Contrasena actualizada exitosamente'
+    });
+  } catch (error) {
+    console.error('Error al cambiar contrasena:', error);
+    res.status(500).json({ error: 'Error del servidor al intentar cambiar la contrasena' });
   }
 });
 
@@ -675,15 +766,29 @@ app.patch('/api/items/:id/stock', async (req, res) => {
   }
 });
 
-// 8. DELETE /api/usuarios/:id — Eliminar usuario y sus proyectos asociados
+// 8. DELETE /api/usuarios/:id — Eliminar usuario (auto o por admin)
 app.delete('/api/usuarios/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const { admin_id } = req.body;
+
     const userRef = db.collection('usuario').doc(id);
     const doc = await userRef.get();
     if (!doc.exists) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
+
+    // Si se proporciona admin_id, verificar que sea admin
+    if (admin_id && admin_id !== id) {
+      const adminDoc = await db.collection('usuario').doc(admin_id).get();
+      if (!adminDoc.exists || adminDoc.data().rol !== 'admin') {
+        return res.status(403).json({ error: 'Solo un administrador puede eliminar cuentas de otros usuarios' });
+      }
+    } else if (admin_id !== id) {
+      // Para auto-eliminación sin admin_id, permitimos
+      // (el usuario se elimina a si mismo)
+    }
+
     const batch = db.batch();
     batch.delete(userRef);
     const proyectosSnap = await db.collection('proyectos').where('usuario_id', '==', id).get();

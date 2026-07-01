@@ -45,17 +45,19 @@
         <button id="login-opt-new" class="login-opt-btn">Usuario Nuevo</button>
       </div>
 
-      <!-- Existing users list -->
+      <!-- Login form (email + password) -->
       <div id="login-section-existing" class="login-section active">
-        <div id="login-user-list" class="login-user-list">
-          <div class="empty-state">Cargando usuarios...</div>
-        </div>
+        <div class="mc-fld"><label>Email</label><input id="login-email" class="mc-input" placeholder="steve@craftbuild.mc" type="email"></div>
+        <div class="mc-fld"><label>Contrasena</label><input id="login-password" class="mc-input" placeholder="******" type="password"></div>
+        <button id="login-do-login" class="mc-btn green wide" style="margin-top:6px">Iniciar Sesion</button>
+        <div id="login-error" class="mc-result" style="margin-top:4px"></div>
       </div>
 
       <!-- Register form -->
       <div id="login-section-new" class="login-section">
         <div class="mc-fld"><label>Nombre</label><input id="reg-nombre" class="mc-input" placeholder="Steve"></div>
-        <div class="mc-fld"><label>Email</label><input id="reg-email" class="mc-input" placeholder="steve@craftbuild.mc"></div>
+        <div class="mc-fld"><label>Email</label><input id="reg-email" class="mc-input" placeholder="steve@craftbuild.mc" type="email"></div>
+        <div class="mc-fld"><label>Contrasena</label><input id="reg-password" class="mc-input" placeholder="Min. 6 caracteres" type="password"></div>
         <button id="login-do-register" class="mc-btn green wide" style="margin-top:6px">Registrarse</button>
       </div>
     </div>
