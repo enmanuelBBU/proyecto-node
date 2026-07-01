@@ -3,7 +3,7 @@ const express = require('express');
 const admin = require('firebase-admin');
 const path = require('path');
 
-const serviceAccount = require('./craftbuild-63e96-firebase-adminsdk-fbsvc-fa3cd2b205.json');
+const serviceAccount = require('./craftbuild-63e96-firebase-adminsdk-fbsvc-8927be5148.json');
 
 
 admin.initializeApp({
