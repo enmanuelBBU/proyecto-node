@@ -1,7 +1,6 @@
 require('dotenv').config();
 const express = require('express');
 const admin = require('firebase-admin');
-const bcrypt = require('bcrypt');
 const path = require('path');
 
 const serviceAccount = require('./craftbuild-63e96-firebase-adminsdk-fbsvc-fa3cd2b205.json');
@@ -30,13 +29,13 @@ function formatFirestoreDate(dateOrTimestamp) {
     return dateOrTimestamp;
   }
   if (isNaN(date.getTime())) return dateOrTimestamp;
-  const months = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
   const day = date.getDate();
   const month = months[date.getMonth()];
   const year = date.getFullYear();
   let hours = date.getHours();
-  const minutes = String(date.getMinutes()).padStart(2,'0');
-  const seconds = String(date.getSeconds()).padStart(2,'0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
   const ampm = hours >= 12 ? 'p.m.' : 'a.m.';
   hours = hours % 12 || 12;
   return `${day} de ${month} de ${year} a las ${hours}:${minutes}:${seconds} ${ampm}`;
@@ -225,13 +224,13 @@ app.delete('/api/proyectos/:id', async (req, res) => {
 
 //Endpoint PATCH para editar el nombre del proyecto
 app.patch('/api/editar/nombre/:id', async (req, res) => {
-  try{
+  try {
 
     const id = req.params.id;
     const nombre_proyecto = req.body.nombre_proyecto;
     const docRef = db.collection('proyectos').doc(id);
 
-    if(nombre_proyecto === undefined){
+    if (nombre_proyecto === undefined) {
       return res.status(400).json({ mensaje: 'El campo nombre_proyecto es requerido' });
     }
 
@@ -242,26 +241,26 @@ app.patch('/api/editar/nombre/:id', async (req, res) => {
 
     await docRef.update({ nombre_proyecto: nombre_proyecto });
 
-    res.json({ 
+    res.json({
       mensaje: 'Nombre del proyecto actualizado exitosamente',
       nombre_proyecto: nombre_proyecto
     });
 
-  }catch (error){
-    res.status(500).json({ error: 'Error del servidor al intentar actualizar el nombre del proyecto'+ error.message });
+  } catch (error) {
+    res.status(500).json({ error: 'Error del servidor al intentar actualizar el nombre del proyecto' + error.message });
   }
 
 });
 
 //Endpoint PATCH para editar el estado del proyecto
 app.patch('/api/editar/estado/:id', async (req, res) => {
-  try{
+  try {
 
     const id = req.params.id;
     const estado = req.body.estado;
     const docRef = db.collection('proyectos').doc(id);
 
-    if(estado === undefined){
+    if (estado === undefined) {
       return res.status(400).json({ mensaje: 'El campo "estado" es requerido' });
     }
 
@@ -284,13 +283,13 @@ app.patch('/api/editar/estado/:id', async (req, res) => {
 
     await docRef.update({ estado: estado });
 
-    res.json({ 
+    res.json({
       mensaje: 'Estado del proyecto actualizado exitosamente',
       estado: estado
     });
 
-  }catch (error){
-    res.status(500).json({ error: 'Error del servidor al intentar actualizar el estado del proyecto'+ error.message });
+  } catch (error) {
+    res.status(500).json({ error: 'Error del servidor al intentar actualizar el estado del proyecto' + error.message });
   }
 });
 
@@ -345,7 +344,7 @@ app.get('/api/items/:id/materiales', async (req, res) => {
   }
 });
 
-// Endpoint PUT para actualizar un item (materiales incluidos)
+// Endpoint PUT para actualizar un item
 app.put('/api/items/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -356,19 +355,6 @@ app.put('/api/items/:id', async (req, res) => {
 
     if (!doc.exists) {
       return res.status(404).json({ error: 'Item no encontrado' });
-    }
-
-    if (itemData.receta_matriz !== undefined && !validateRecetaMatriz(itemData.receta_matriz)) {
-      return res.status(400).json({ error: 'La receta_matriz debe ser un arreglo de exactamente 9 elementos (strings o null)' });
-    }
-    if (itemData.ingredientes_para_calculo !== undefined && !validateIngredientes(itemData.ingredientes_para_calculo)) {
-      return res.status(400).json({ error: 'Los ingredientes_para_calculo deben ser un arreglo de objetos { item_id, cantidad }' });
-    }
-
-    if (itemData.es_materia_prima === true) {
-      if (itemData.receta_matriz && itemData.receta_matriz.some(s => s !== null)) {
-        return res.status(400).json({ error: 'Una materia prima no puede tener receta_matriz' });
-      }
     }
 
     await docRef.update(itemData);
@@ -441,15 +427,13 @@ app.get('/api/proyectos', async (req, res) => {
 
 // ===================== NUEVOS ENDPOINTS =====================
 
-// 0. GET /api/usuarios — Obtener todos los usuarios (sin password)
+// 0. GET /api/usuarios — Obtener todos los usuarios
 app.get('/api/usuarios', async (req, res) => {
   try {
     const snapshot = await db.collection('usuario').get();
     const usuarios = [];
     snapshot.forEach(doc => {
-      const data = formatDocumentData(doc.data());
-      delete data.password;
-      usuarios.push({ id: doc.id, ...data });
+      usuarios.push({ id: doc.id, ...formatDocumentData(doc.data()) });
     });
     res.status(200).json(usuarios);
   } catch (error) {
@@ -458,7 +442,7 @@ app.get('/api/usuarios', async (req, res) => {
   }
 });
 
-// 1. GET /api/usuarios/:id — Obtener usuario por ID (sin password)
+// 1. GET /api/usuarios/:id — Obtener usuario por ID
 app.get('/api/usuarios/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -466,9 +450,7 @@ app.get('/api/usuarios/:id', async (req, res) => {
     if (!doc.exists) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
-    const data = formatDocumentData(doc.data());
-    delete data.password;
-    res.status(200).json({ id: doc.id, ...data });
+    res.status(200).json({ id: doc.id, ...formatDocumentData(doc.data()) });
   } catch (error) {
     console.error('Error al obtener usuario:', error);
     res.status(500).json({ error: 'Error del servidor al intentar obtener el usuario' });
@@ -500,15 +482,15 @@ app.get('/api/proyectos/:id/items', async (req, res) => {
   }
 });
 
-// 3. POST /api/usuarios — Registrar nuevo usuario (con password y rol por defecto)
+// 3. POST /api/usuarios — Registrar nuevo usuario
 app.post('/api/usuarios', async (req, res) => {
   try {
-    const { id, nombre, email, password, fecha_registro } = req.body;
+    const { id, nombre, email, fecha_registro, password } = req.body;
     if (!nombre || !email || !password) {
       return res.status(400).json({ error: 'Los campos "nombre", "email" y "password" son requeridos' });
     }
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'La contrasena debe tener al menos 6 caracteres' });
+    if (typeof password !== 'string' || password.trim() === '') {
+      return res.status(400).json({ error: 'El campo "password" debe ser una cadena de texto no vacía' });
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
@@ -533,86 +515,16 @@ app.post('/api/usuarios', async (req, res) => {
     } else {
       registroTimestamp = admin.firestore.Timestamp.now();
     }
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-    const nuevoUsuario = { nombre, email, password: hashedPassword, fecha_registro: registroTimestamp, rol: 'usuario' };
+    const nuevoUsuario = { nombre, email, fecha_registro: registroTimestamp, password };
     await db.collection('usuario').doc(docId).set(nuevoUsuario);
-    const respuesta = { nombre, email, fecha_registro: formatDocumentData(registroTimestamp), rol: 'usuario' };
     res.status(201).json({
       mensaje: 'Usuario registrado exitosamente',
       id: docId,
-      data: respuesta
+      data: formatDocumentData(nuevoUsuario)
     });
   } catch (error) {
     console.error('Error al registrar usuario:', error);
     res.status(500).json({ error: 'Error del servidor al intentar registrar el usuario' });
-  }
-});
-
-// Endpoint POST /api/login — Iniciar sesion con email y password
-app.post('/api/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Los campos "email" y "password" son requeridos' });
-    }
-    const snapshot = await db.collection('usuario').where('email', '==', email).get();
-    if (snapshot.empty) {
-      return res.status(401).json({ error: 'Credenciales invalidas' });
-    }
-    const doc = snapshot.docs[0];
-    const userData = doc.data();
-    const passwordValida = await bcrypt.compare(password, userData.password);
-    if (!passwordValida) {
-      return res.status(401).json({ error: 'Credenciales invalidas' });
-    }
-    res.status(200).json({
-      mensaje: 'Inicio de sesion exitoso',
-      id: doc.id,
-      data: {
-        id: doc.id,
-        nombre: userData.nombre,
-        email: userData.email,
-        fecha_registro: formatDocumentData(userData.fecha_registro),
-        rol: userData.rol || 'usuario'
-      }
-    });
-  } catch (error) {
-    console.error('Error al iniciar sesion:', error);
-    res.status(500).json({ error: 'Error del servidor al intentar iniciar sesion' });
-  }
-});
-
-// Endpoint PATCH /api/usuarios/:id/password — Cambiar contrasena
-app.patch('/api/usuarios/:id/password', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { password_actual, password_nueva } = req.body;
-    if (!password_actual || !password_nueva) {
-      return res.status(400).json({ error: 'Los campos "password_actual" y "password_nueva" son requeridos' });
-    }
-    if (password_nueva.length < 6) {
-      return res.status(400).json({ error: 'La nueva contrasena debe tener al menos 6 caracteres' });
-    }
-    const docRef = db.collection('usuario').doc(id);
-    const doc = await docRef.get();
-    if (!doc.exists) {
-      return res.status(404).json({ error: 'Usuario no encontrado' });
-    }
-    const userData = doc.data();
-    const passwordValida = await bcrypt.compare(password_actual, userData.password);
-    if (!passwordValida) {
-      return res.status(401).json({ error: 'La contrasena actual no es correcta' });
-    }
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password_nueva, salt);
-    await docRef.update({ password: hashedPassword });
-    res.status(200).json({
-      mensaje: 'Contrasena actualizada exitosamente'
-    });
-  } catch (error) {
-    console.error('Error al cambiar contrasena:', error);
-    res.status(500).json({ error: 'Error del servidor al intentar cambiar la contrasena' });
   }
 });
 
@@ -678,9 +590,12 @@ app.post('/api/proyectos/:id/items', async (req, res) => {
 app.put('/api/usuarios/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { nombre, email, fecha_registro } = req.body;
-    if (!nombre || !email || !fecha_registro) {
-      return res.status(400).json({ error: 'Todos los campos son requeridos para reemplazo completo ("nombre", "email", "fecha_registro")' });
+    const { nombre, email, fecha_registro, password } = req.body;
+    if (!nombre || !email || !fecha_registro || !password) {
+      return res.status(400).json({ error: 'Todos los campos son requeridos para reemplazo completo ("nombre", "email", "fecha_registro", "password")' });
+    }
+    if (typeof password !== 'string' || password.trim() === '') {
+      return res.status(400).json({ error: 'El campo "password" debe ser una cadena de texto no vacía' });
     }
     const docRef = db.collection('usuario').doc(id);
     const doc = await docRef.get();
@@ -692,7 +607,7 @@ app.put('/api/usuarios/:id', async (req, res) => {
       return res.status(400).json({ error: 'El formato del email no es valido' });
     }
     const userTimestamp = admin.firestore.Timestamp.fromDate(new Date(fecha_registro));
-    const nuevoPerfil = { nombre, email, fecha_registro: userTimestamp };
+    const nuevoPerfil = { nombre, email, fecha_registro: userTimestamp, password };
     await docRef.set(nuevoPerfil);
     res.status(200).json({
       mensaje: 'Perfil de usuario reemplazado completamente',
@@ -714,6 +629,11 @@ app.patch('/api/usuarios/:id', async (req, res) => {
     const doc = await docRef.get();
     if (!doc.exists) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+    if (updates.password !== undefined) {
+      if (typeof updates.password !== 'string' || updates.password.trim() === '') {
+        return res.status(400).json({ error: 'El campo "password" debe ser una cadena de texto no vacía' });
+      }
     }
     if (updates.email) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -766,29 +686,15 @@ app.patch('/api/items/:id/stock', async (req, res) => {
   }
 });
 
-// 8. DELETE /api/usuarios/:id — Eliminar usuario (auto o por admin)
+// 8. DELETE /api/usuarios/:id — Eliminar usuario y sus proyectos asociados
 app.delete('/api/usuarios/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { admin_id } = req.body;
-
     const userRef = db.collection('usuario').doc(id);
     const doc = await userRef.get();
     if (!doc.exists) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
-
-    // Si se proporciona admin_id, verificar que sea admin
-    if (admin_id && admin_id !== id) {
-      const adminDoc = await db.collection('usuario').doc(admin_id).get();
-      if (!adminDoc.exists || adminDoc.data().rol !== 'admin') {
-        return res.status(403).json({ error: 'Solo un administrador puede eliminar cuentas de otros usuarios' });
-      }
-    } else if (admin_id !== id) {
-      // Para auto-eliminación sin admin_id, permitimos
-      // (el usuario se elimina a si mismo)
-    }
-
     const batch = db.batch();
     batch.delete(userRef);
     const proyectosSnap = await db.collection('proyectos').where('usuario_id', '==', id).get();
@@ -834,7 +740,54 @@ app.delete('/api/proyectos/:id/items/:item_id', async (req, res) => {
   }
 });
 
+// Endpoint POST /api/login — Iniciar sesión por email o nombre
+app.post('/api/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email/Nombre y contraseña son requeridos' });
+    }
+
+    const identifier = email.trim();
+
+    // Buscar primero por email
+    let userSnap = await db.collection('usuario').where('email', '==', identifier).get();
+
+    // Si no se encuentra por email, buscar por nombre
+    if (userSnap.empty) {
+      userSnap = await db.collection('usuario').where('nombre', '==', identifier).get();
+    }
+
+    if (userSnap.empty) {
+      return res.status(401).json({ error: 'Credenciales inválidas' });
+    }
+
+    const userDoc = userSnap.docs[0];
+    const userData = userDoc.data();
+
+    // Validar contraseña
+    if (userData.password !== password) {
+      return res.status(401).json({ error: 'Credenciales inválidas' });
+    }
+
+    res.status(200).json({
+      mensaje: 'Inicio de sesión exitoso',
+      data: {
+        id: userDoc.id,
+        nombre: userData.nombre,
+        email: userData.email,
+        rol: userData.rol || 'user'
+      }
+    });
+
+  } catch (error) {
+    console.error('Error al iniciar sesión:', error);
+    res.status(500).json({ error: 'Error del servidor al intentar iniciar sesión' });
+  }
+});
+
 // Iniciar el servidor
 app.listen(PORT, () => {
   console.log(`Servidor ejecutándose en http://localhost:${PORT}`);
 });
+
