@@ -70,7 +70,16 @@ export default function PerfilPanel() {
     if (!actual || !nueva) return showToast('Ambos campos son obligatorios', 'error');
     if (nueva.length < 6) return showToast('La nueva contrasena debe tener al menos 6 caracteres', 'error');
     try {
-      const { ok, data } = await api('PATCH', `/usuarios/${user.id}/password`, { password_actual: actual, password_nueva: nueva });
+      const { ok: okGet, data: current } = await api('GET', '/usuarios/' + user.id);
+      if (!okGet) {
+        setRPassword({ type: 'error', content: (current && current.error) || 'Error al verificar la contrasena actual' });
+        return;
+      }
+      if (current.password !== actual) {
+        setRPassword({ type: 'error', content: 'La contrasena actual no es correcta' });
+        return;
+      }
+      const { ok, data } = await api('PATCH', '/usuarios/' + user.id, { password: nueva });
       setRPassword({ type: ok ? 'success' : 'error', content: ok ? 'Contrasena actualizada exitosamente!' : (data.error || 'Error') });
       if (ok) { showToast('Contrasena actualizada!', 'success'); setPassActual(''); setPassNueva(''); }
     } catch (e) {
