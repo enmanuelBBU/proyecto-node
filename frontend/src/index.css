@@ -308,19 +308,32 @@ select.mc-input option { background: var(--mc-bg); color: #FFF; }
   gap: 4px; justify-content: center; margin: 8px 0;
 }
 .craft-slot {
+  position: relative;
   width: 56px; height: 56px;
   background: var(--mc-bg);
   border: 3px solid var(--mc-border-dark);
   box-shadow: inset 2px 2px 0 rgba(0,0,0,0.4);
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer; transition: border-color 0.15s;
+  cursor: default; transition: border-color 0.15s;
 }
 .craft-slot:hover { border-color: var(--mc-border-light); }
-.craft-slot select {
-  width: 100%; height: 100%; background: transparent; border: none;
-  color: var(--mc-green); font-family: var(--font-mc);
-  font-size: 0.45rem; text-align: center; outline: none;
+.craft-slot.drag-over { outline: 3px solid var(--mc-green); outline-offset: 2px; }
+.craft-slot .slot-clear-btn {
+  position: absolute; top: -6px; right: -6px;
+  width: 16px; height: 16px; line-height: 14px;
+  padding: 0; font-size: 0.4rem;
+  background: var(--mc-red); color: #FFF;
+  border: 1px solid #000; cursor: pointer;
 }
+.ingredient-drag-icon {
+  width: 30px; height: 30px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--mc-panel-light);
+  border: 2px solid var(--mc-border-dark);
+  box-shadow: inset -1px -1px 0 rgba(0,0,0,0.3), inset 1px 1px 0 rgba(255,255,255,0.04);
+  cursor: grab;
+}
+.ingredient-drag-icon:active { cursor: grabbing; }
 
 /* ============ ITEM ROW (INVENTORY) ============ */
 .item-row {
