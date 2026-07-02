@@ -433,7 +433,8 @@ app.get('/api/usuarios', async (req, res) => {
     const snapshot = await db.collection('usuario').get();
     const usuarios = [];
     snapshot.forEach(doc => {
-      usuarios.push({ id: doc.id, ...formatDocumentData(doc.data()) });
+      const userData = doc.data();
+      usuarios.push({ id: doc.id, ...formatDocumentData(userData), inventario: userData.inventario || {} });
     });
     res.status(200).json(usuarios);
   } catch (error) {
@@ -450,7 +451,8 @@ app.get('/api/usuarios/:id', async (req, res) => {
     if (!doc.exists) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
-    res.status(200).json({ id: doc.id, ...formatDocumentData(doc.data()) });
+    const userData = doc.data();
+    res.status(200).json({ id: doc.id, ...formatDocumentData(userData), inventario: userData.inventario || {} });
   } catch (error) {
     console.error('Error al obtener usuario:', error);
     res.status(500).json({ error: 'Error del servidor al intentar obtener el usuario' });
@@ -515,7 +517,7 @@ app.post('/api/usuarios', async (req, res) => {
     } else {
       registroTimestamp = admin.firestore.Timestamp.now();
     }
-    const nuevoUsuario = { nombre, email, fecha_registro: registroTimestamp, password };
+    const nuevoUsuario = { nombre, email, fecha_registro: registroTimestamp, password, inventario: {} };
     await db.collection('usuario').doc(docId).set(nuevoUsuario);
     res.status(201).json({
       mensaje: 'Usuario registrado exitosamente',
@@ -532,7 +534,7 @@ app.post('/api/usuarios', async (req, res) => {
 app.post('/api/proyectos/:id/items', async (req, res) => {
   try {
     const { id } = req.params;
-    const { nombre, categoria, es_materia_prima, ingredientes_para_calculo, receta_matriz, stock, cantidad } = req.body;
+    const { nombre, categoria, es_materia_prima, ingredientes_para_calculo, receta_matriz, cantidad } = req.body;
     if (!nombre) {
       return res.status(400).json({ error: 'El campo "nombre" del item es requerido' });
     }
@@ -557,8 +559,7 @@ app.post('/api/proyectos/:id/items', async (req, res) => {
       categoria: categoria || '',
       es_materia_prima: !!es_materia_prima,
       receta_matriz: receta_matriz || null,
-      ingredientes_para_calculo: ingredientes_para_calculo || [],
-      stock: Number.isInteger(stock) && stock >= 0 ? stock : 0
+      ingredientes_para_calculo: ingredientes_para_calculo || []
     };
     await db.runTransaction(async (transaction) => {
       const projSnap = await transaction.get(proyectoRef);
@@ -662,27 +663,49 @@ app.patch('/api/usuarios/:id', async (req, res) => {
 });
 
 // 7. PATCH /api/items/:id/stock — Actualizar stock de un item
-app.patch('/api/items/:id/stock', async (req, res) => {
+// 7. PATCH /api/usuarios/:id/inventario — Actualizar inventario de un usuario
+app.patch('/api/usuarios/:id/inventario', async (req, res) => {
   try {
     const { id } = req.params;
-    const { stock } = req.body;
-    if (stock === undefined || !Number.isInteger(stock) || stock < 0) {
-      return res.status(400).json({ error: 'El campo "stock" es requerido y debe ser un numero entero mayor o igual a 0' });
+    const { item_id, cantidad } = req.body;
+    if (!item_id || typeof item_id !== 'string') {
+      return res.status(400).json({ error: 'El campo "item_id" es requerido y debe ser una cadena' });
     }
-    const docRef = db.collection('items').doc(id);
-    const doc = await docRef.get();
-    if (!doc.exists) {
-      return res.status(404).json({ error: 'Item no encontrado' });
+    if (cantidad === undefined || !Number.isInteger(cantidad) || cantidad < 0) {
+      return res.status(400).json({ error: 'El campo "cantidad" es requerido y debe ser un numero entero mayor o igual a 0' });
     }
-    await docRef.update({ stock });
+
+    // Verificar si el usuario existe
+    const userRef = db.collection('usuario').doc(id);
+    const userDoc = await userRef.get();
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    // Verificar si el item existe en el catálogo
+    const itemRef = db.collection('items').doc(item_id);
+    const itemDoc = await itemRef.get();
+    if (!itemDoc.exists) {
+      return res.status(404).json({ error: 'El item especificado no existe en el catálogo maestro' });
+    }
+
+    // Actualizar el inventario
+    const updateField = `inventario.${item_id}`;
+    await userRef.update({
+      [updateField]: cantidad
+    });
+
+    const updatedUserDoc = await userRef.get();
+    const updatedUserData = updatedUserDoc.data();
+
     res.status(200).json({
-      mensaje: 'Stock de item actualizado exitosamente',
+      mensaje: 'Inventario de usuario actualizado exitosamente',
       id: id,
-      stock: stock
+      inventario: updatedUserData.inventario || {}
     });
   } catch (error) {
-    console.error('Error al actualizar stock de item:', error);
-    res.status(500).json({ error: 'Error del servidor al intentar actualizar el stock' });
+    console.error('Error al actualizar inventario de usuario:', error);
+    res.status(500).json({ error: 'Error del servidor al intentar actualizar el inventario' });
   }
 });
 

@@ -31,6 +31,7 @@ export const usuariosApi = {
   replace: (id, userData) => request(`/usuarios/${id}`, { method: 'PUT', body: userData }),
   update: (id, userData) => request(`/usuarios/${id}`, { method: 'PATCH', body: userData }),
   remove: (id) => request(`/usuarios/${id}`, { method: 'DELETE' }),
+  updateInventory: (id, itemId, cantidad) => request(`/usuarios/${id}/inventario`, { method: 'PATCH', body: { item_id: itemId, cantidad } }),
 };
 
 // ===== PROYECTOS =====
@@ -49,7 +50,6 @@ export const itemsApi = {
   getAll: () => request('/items'),
   create: (itemData) => request('/items', { method: 'POST', body: itemData }),
   updateCrafteo: (id, data) => request(`/items/${id}`, { method: 'PUT', body: data }),
-  updateStock: (id, stock) => request(`/items/${id}/stock`, { method: 'PATCH', body: { stock } }),
   remove: (id) => request(`/items/${id}`, { method: 'DELETE' }),
   getMateriales: (id) => request(`/items/${id}/materiales`),
 };

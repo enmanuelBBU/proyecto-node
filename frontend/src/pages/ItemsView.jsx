@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { itemsApi } from '../services/api';
+import { itemsApi, usuariosApi } from '../services/api';
 import { useToast } from '../components/Toast';
 import Modal from '../components/Modal';
 
@@ -13,11 +13,23 @@ export default function ItemsView() {
     ingredientes_para_calculo: [],
   });
   const [stockEdit, setStockEdit] = useState({ id: null, value: 0 });
+  const [usuarios, setUsuarios] = useState([]);
+  const [activeUser, setActiveUser] = useState(null);
   const addToast = useToast();
 
   useEffect(() => {
     loadItems();
+    loadUsuarios();
   }, []);
+
+  async function loadUsuarios() {
+    try {
+      const data = await usuariosApi.getAll();
+      setUsuarios(data);
+    } catch (error) {
+      console.error('Error al cargar usuarios:', error);
+    }
+  }
 
   async function loadItems() {
     setLoading(true);
@@ -47,13 +59,15 @@ export default function ItemsView() {
     }
   }
 
-  // 8. PATCH /api/items/:id/stock — Actualizar stock
+  // 8. PATCH /api/usuarios/:id/inventario — Actualizar stock de usuario
   async function handleUpdateStock(id) {
+    if (!activeUser) return;
     try {
-      await itemsApi.updateStock(id, stockEdit.value);
-      addToast('Stock actualizado');
+      const result = await usuariosApi.updateInventory(activeUser.id, id, stockEdit.value);
+      addToast('Stock de usuario actualizado');
+      setActiveUser(prev => ({ ...prev, inventario: result.inventario }));
+      setUsuarios(prev => prev.map(u => u.id === activeUser.id ? { ...u, inventario: result.inventario } : u));
       setStockEdit({ id: null, value: 0 });
-      loadItems();
     } catch (error) {
       addToast(error.message, 'error');
     }
@@ -105,11 +119,30 @@ export default function ItemsView() {
   return (
     <div className="page-enter">
       <div className="card">
-        <div className="card-header">
-          <h2>🧊 Catálogo de Items</h2>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-            {items.length} items
-          </span>
+        <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+          <div>
+            <h2>🧊 Catálogo de Items</h2>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              {items.length} items
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Usuario Activo:</label>
+            <select
+              className="form-control"
+              style={{ width: '200px', padding: '6px 12px', fontSize: '0.85rem', marginBottom: 0 }}
+              value={activeUser ? activeUser.id : ''}
+              onChange={(e) => {
+                const user = usuarios.find(u => u.id === e.target.value);
+                setActiveUser(user || null);
+              }}
+            >
+              <option value="">-- Seleccionar --</option>
+              {usuarios.map(u => (
+                <option key={u.id} value={u.id}>{u.nombre}</option>
+              ))}
+            </select>
+          </div>
         </div>
         <div className="card-body">
           {items.length === 0 ? (
@@ -158,14 +191,15 @@ export default function ItemsView() {
                         ) : (
                           <span
                             style={{
-                              fontFamily: 'var(--font-mono)', cursor: 'pointer',
+                              fontFamily: 'var(--font-mono)', cursor: activeUser ? 'pointer' : 'default',
                               padding: '4px 8px', borderRadius: 'var(--radius-sm)',
                               background: 'var(--bg-primary)', border: '1px solid var(--border)',
+                              opacity: activeUser ? 1 : 0.5
                             }}
-                            onClick={() => setStockEdit({ id: item.id, value: item.stock || 0 })}
-                            title="Click para editar stock"
+                            onClick={() => activeUser && setStockEdit({ id: item.id, value: activeUser.inventario?.[item.id] || 0 })}
+                            title={activeUser ? "Click para editar stock" : "Selecciona un usuario para editar stock"}
                           >
-                            {item.stock !== undefined ? item.stock : '—'}
+                            {activeUser ? (activeUser.inventario?.[item.id] !== undefined ? activeUser.inventario[item.id] : 0) : '—'}
                           </span>
                         )}
                       </td>

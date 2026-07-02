@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { usuariosApi } from '../services/api';
+import { usuariosApi, itemsApi } from '../services/api';
 import { useToast } from '../components/Toast';
 import Modal from '../components/Modal';
 
@@ -13,11 +13,29 @@ export default function UsuariosView() {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [searchId, setSearchId] = useState('');
   const [searchedUser, setSearchedUser] = useState(null);
+  
+  // Estados para Inventario
+  const [items, setItems] = useState([]);
+  const [showInventory, setShowInventory] = useState(false);
+  const [selectedUserInventory, setSelectedUserInventory] = useState(null);
+  const [inventoryForm, setInventoryForm] = useState({});
+  const [savingInventory, setSavingInventory] = useState(false);
+  
   const addToast = useToast();
 
   useEffect(() => {
     loadUsuarios();
+    loadItems();
   }, []);
+
+  async function loadItems() {
+    try {
+      const data = await itemsApi.getAll();
+      setItems(data);
+    } catch (error) {
+      console.error('Error al cargar items del catálogo:', error);
+    }
+  }
 
   // GET /api/usuarios
   async function loadUsuarios() {
@@ -102,6 +120,50 @@ export default function UsuariosView() {
       setDeleteConfirm(null);
     } catch (error) {
       addToast(error.message, 'error');
+    }
+  }
+
+  function openInventory(user) {
+    setSelectedUserInventory(user);
+    setInventoryForm(user.inventario || {});
+    setShowInventory(true);
+  }
+
+  function handleInventoryQtyChange(itemId, qty) {
+    setInventoryForm(prev => ({
+      ...prev,
+      [itemId]: parseInt(qty) || 0
+    }));
+  }
+
+  async function handleSaveInventory(e) {
+    e.preventDefault();
+    setSavingInventory(true);
+    try {
+      const userId = selectedUserInventory.id;
+      const originalInv = selectedUserInventory.inventario || {};
+      const updates = [];
+
+      for (const item of items) {
+        const originalQty = originalInv[item.id] || 0;
+        const newQty = inventoryForm[item.id] || 0;
+        if (originalQty !== newQty) {
+          updates.push(usuariosApi.updateInventory(userId, item.id, newQty));
+        }
+      }
+
+      if (updates.length > 0) {
+        await Promise.all(updates);
+      }
+
+      addToast('Inventario actualizado exitosamente');
+      setShowInventory(false);
+      setSelectedUserInventory(null);
+      loadUsuarios();
+    } catch (error) {
+      addToast('Error al actualizar inventario: ' + error.message, 'error');
+    } finally {
+      setSavingInventory(false);
     }
   }
 
@@ -196,6 +258,11 @@ export default function UsuariosView() {
                       <td style={{ fontSize: '0.8rem' }}>{user.fecha_registro}</td>
                       <td>
                         <div className="action-bar">
+                          <button
+                            className="btn-icon"
+                            title="Ver Inventario (🎒)"
+                            onClick={() => openInventory(user)}
+                          >🎒</button>
                           <button
                             className="btn-icon"
                             title="Editar parcial (PATCH)"
@@ -302,6 +369,63 @@ export default function UsuariosView() {
           }}>
             ⚠️ Se eliminarán en cascada todos los proyectos asociados a este usuario.
           </div>
+        </Modal>
+      )}
+
+      {/* Inventory Modal */}
+      {showInventory && selectedUserInventory && (
+        <Modal
+          title={`🎒 Inventario de ${selectedUserInventory.nombre}`}
+          onClose={() => {
+            setShowInventory(false);
+            setSelectedUserInventory(null);
+          }}
+          footer={
+            <>
+              <button className="btn btn-secondary" onClick={() => {
+                setShowInventory(false);
+                setSelectedUserInventory(null);
+              }} disabled={savingInventory}>
+                Cancelar
+              </button>
+              <button className="btn btn-primary" form="inventory-form" disabled={savingInventory}>
+                {savingInventory ? 'Guardando...' : 'Guardar Inventario'}
+              </button>
+            </>
+          }
+        >
+          <form id="inventory-form" onSubmit={handleSaveInventory}>
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '16px' }}>
+              Ajusta las cantidades de los ítems en el inventario del usuario.
+            </p>
+            {items.length === 0 ? (
+              <p style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No hay ítems en el catálogo para asignar.</p>
+            ) : (
+              <div style={{ maxHeight: '400px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px', paddingRight: '4px' }}>
+                {items.map((item) => {
+                  const qty = inventoryForm[item.id] || 0;
+                  return (
+                    <div key={item.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
+                      <div>
+                        <div style={{ fontWeight: 500, fontSize: '0.88rem', color: 'var(--text-primary)' }}>{item.nombre}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>ID: {item.id} | {item.categoria || 'Sin categoría'}</div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input
+                          type="number"
+                          min="0"
+                          className="form-control"
+                          style={{ width: '80px', textAlign: 'center', padding: '4px 8px', marginBottom: 0 }}
+                          value={qty}
+                          onChange={(e) => handleInventoryQtyChange(item.id, e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </form>
         </Modal>
       )}
     </div>
