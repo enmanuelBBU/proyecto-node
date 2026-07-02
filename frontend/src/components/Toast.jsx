@@ -1,32 +1,28 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 
-const ToastContext = createContext();
+const ToastContext = createContext(null);
 
 export function useToast() {
   return useContext(ToastContext);
 }
 
 export function ToastProvider({ children }) {
-  const [toasts, setToasts] = useState([]);
+  const [toast, setToast] = useState(null);
+  const timeoutRef = useRef(null);
 
-  const addToast = useCallback((message, type = 'success') => {
-    const id = Date.now();
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 3500);
+  const showToast = useCallback((message, type = 'success') => {
+    clearTimeout(timeoutRef.current);
+    setToast({ id: Date.now(), message, type });
+    timeoutRef.current = setTimeout(() => setToast(null), 3000);
   }, []);
 
+  useEffect(() => () => clearTimeout(timeoutRef.current), []);
+
   return (
-    <ToastContext.Provider value={addToast}>
+    <ToastContext.Provider value={showToast}>
       {children}
-      <div className="toast-container">
-        {toasts.map((t) => (
-          <div key={t.id} className={`toast ${t.type}`}>
-            <span>{t.type === 'success' ? '✅' : '❌'}</span>
-            <span>{t.message}</span>
-          </div>
-        ))}
+      <div className={`toast ${toast ? toast.type : ''} ${toast ? '' : 'hidden'}`}>
+        {toast ? toast.message : ''}
       </div>
     </ToastContext.Provider>
   );

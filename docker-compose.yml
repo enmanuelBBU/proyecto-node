@@ -1,0 +1,13 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ./craftbuild-63e96-firebase-adminsdk-fbsvc-8927be5148.json:/app/craftbuild-63e96-firebase-adminsdk-fbsvc-8927be5148.json:ro
+    restart: unless-stopped

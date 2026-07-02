@@ -84,7 +84,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'frontend', 'dist')));
 
 // Endpoint GET simple para verificar la conexión
 app.get('/api/datos', async (req, res) => {
@@ -668,8 +668,8 @@ app.patch('/api/usuarios/:id/inventario', async (req, res) => {
   try {
     const { id } = req.params;
     const { item_id, cantidad } = req.body;
-    if (!item_id || typeof item_id !== 'string') {
-      return res.status(400).json({ error: 'El campo "item_id" es requerido y debe ser una cadena' });
+    if (!item_id || typeof item_id !== 'string' || item_id.includes('/')) {
+      return res.status(400).json({ error: 'El campo "item_id" es requerido, debe ser una cadena y no puede contener "/"' });
     }
     if (cantidad === undefined || !Number.isInteger(cantidad) || cantidad < 0) {
       return res.status(400).json({ error: 'El campo "cantidad" es requerido y debe ser un numero entero mayor o igual a 0' });
