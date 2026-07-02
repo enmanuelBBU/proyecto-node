@@ -170,22 +170,49 @@ export function IngredientRows({ rows, setRows, items, addLabel = '+ Agregar Ing
 }
 
 export function CraftGrid({ slots, setSlots, items, idPrefix }) {
+  const [dragOverIdx, setDragOverIdx] = useState(null);
+  const byId = {};
+  for (const it of items) byId[it.id] = it;
+
+  function clearSlot(i) {
+    setSlots(slots.map((s, si) => (si === i ? null : s)));
+  }
+
+  function dropOnSlot(i, e) {
+    e.preventDefault();
+    setDragOverIdx(null);
+    const itemId = e.dataTransfer.getData('text/plain');
+    if (!itemId) return;
+    setSlots(slots.map((s, si) => (si === i ? itemId : s)));
+  }
+
   return (
     <div className="craft-grid">
-      {slots.map((val, i) => (
-        <div className="craft-slot" key={i}>
-          <select
+      {slots.map((val, i) => {
+        const item = val ? byId[val] : null;
+        return (
+          <div
+            className={`craft-slot${dragOverIdx === i ? ' drag-over' : ''}`}
+            key={i}
             id={`${idPrefix}-slot-${i}`}
-            className="mc-input"
-            style={{ width: '100%', height: '100%', border: 'none', background: 'transparent', fontSize: '0.4rem' }}
-            value={val || ''}
-            onChange={(e) => setSlots(slots.map((s, si) => (si === i ? (e.target.value || null) : s)))}
+            onDragOver={(e) => { e.preventDefault(); setDragOverIdx(i); }}
+            onDragLeave={() => setDragOverIdx((cur) => (cur === i ? null : cur))}
+            onDrop={(e) => dropOnSlot(i, e)}
           >
-            <option value="">-</option>
-            {items.map((item) => <option key={item.id} value={item.id}>{item.nombre || item.id}</option>)}
-          </select>
-        </div>
-      ))}
+            {item && (
+              <>
+                <McIcon id={iconFor(item)} fallback={item.es_materia_prima ? '🪨' : '🔧'} />
+                <button
+                  type="button"
+                  className="slot-clear-btn"
+                  title="Quitar de la receta"
+                  onClick={() => clearSlot(i)}
+                >✕</button>
+              </>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
