@@ -185,7 +185,7 @@ body {
 .inv-modal-body::-webkit-scrollbar-track { background: var(--mc-bg); }
 .inv-modal-body::-webkit-scrollbar-thumb { background: var(--mc-border-light); border: 1px solid #000; }
 .inv-grid-fixed {
-  display: grid; grid-template-columns: repeat(9, 1fr);
+  display: grid; grid-template-columns: repeat(9, minmax(0, 1fr));
   gap: 4px;
 }
 .inv-slot.empty:hover { border-color: var(--mc-border-dark); background: var(--mc-panel-light); }
@@ -391,6 +391,17 @@ select.mc-input { cursor: pointer; }
 .anadir-cols { display: flex; gap: 10px; }
 .anadir-cols > div { flex: 1; min-width: 0; }
 .anadir-cols h5 { font-size: 0.55rem; color: var(--mc-text-muted); margin-bottom: 6px; }
+/* inventory grid is narrow here — use fewer, larger columns */
+.anadir-cols .inv-grid-fixed { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.inv-drop-zone {
+  padding: 6px; background: var(--mc-bg);
+  border: 3px solid var(--mc-border-dark);
+  box-shadow: inset 2px 2px 0 rgba(0,0,0,0.4);
+  max-height: 320px; overflow-y: auto;
+}
+.inv-drop-zone::-webkit-scrollbar { width: 8px; }
+.inv-drop-zone::-webkit-scrollbar-track { background: var(--mc-bg); }
+.inv-drop-zone::-webkit-scrollbar-thumb { background: var(--mc-border-light); border: 1px solid #000; }
 
 .tag {
   display: inline-block; padding: 2px 6px; border: 1px solid #000;
