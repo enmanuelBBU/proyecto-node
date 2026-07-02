@@ -133,22 +133,37 @@ export function IngredientRows({ rows, setRows, items, addLabel = '+ Agregar Ing
   function addRow() {
     setRows([...rows, { itemId: '', cantidad: 1 }]);
   }
+  const byId = {};
+  for (const it of items) byId[it.id] = it;
   return (
     <>
-      {rows.map((row, idx) => (
-        <div className="mc-fld-row" style={{ marginBottom: 4 }} key={idx}>
-          <div className="mc-fld" style={{ flex: 1 }}>
-            <select className="mc-input" value={row.itemId} onChange={(e) => updateRow(idx, 'itemId', e.target.value)}>
-              <option value="">Item...</option>
-              {items.map((item) => <option key={item.id} value={item.id}>{item.nombre || item.id}</option>)}
-            </select>
+      {rows.map((row, idx) => {
+        const item = row.itemId ? byId[row.itemId] : null;
+        return (
+          <div className="mc-fld-row" style={{ marginBottom: 4, alignItems: 'center' }} key={idx}>
+            {item && (
+              <div
+                className="ingredient-drag-icon"
+                draggable
+                title={`Arrastrar ${item.nombre || item.id} a la receta`}
+                onDragStart={(e) => e.dataTransfer.setData('text/plain', row.itemId)}
+              >
+                <McIcon id={iconFor(item)} fallback={item.es_materia_prima ? '🪨' : '🔧'} />
+              </div>
+            )}
+            <div className="mc-fld" style={{ flex: 1 }}>
+              <select className="mc-input" value={row.itemId} onChange={(e) => updateRow(idx, 'itemId', e.target.value)}>
+                <option value="">Item...</option>
+                {items.map((it) => <option key={it.id} value={it.id}>{it.nombre || it.id}</option>)}
+              </select>
+            </div>
+            <div className="mc-fld" style={{ maxWidth: 80 }}>
+              <input className="mc-input" type="number" min="1" value={row.cantidad} onChange={(e) => updateRow(idx, 'cantidad', e.target.value)} />
+            </div>
+            <button className="mc-btn red sm" style={{ padding: '6px 8px', fontSize: '0.5rem' }} onClick={() => removeRow(idx)}>X</button>
           </div>
-          <div className="mc-fld" style={{ maxWidth: 80 }}>
-            <input className="mc-input" type="number" min="1" value={row.cantidad} onChange={(e) => updateRow(idx, 'cantidad', e.target.value)} />
-          </div>
-          <button className="mc-btn red sm" style={{ padding: '6px 8px', fontSize: '0.5rem' }} onClick={() => removeRow(idx)}>X</button>
-        </div>
-      ))}
+        );
+      })}
       <button className="mc-btn sm" style={{ marginBottom: 10 }} onClick={addRow}>{addLabel}</button>
     </>
   );
